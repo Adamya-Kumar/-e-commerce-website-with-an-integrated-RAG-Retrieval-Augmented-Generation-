@@ -1,0 +1,66 @@
+/*
+  Spark design tokens. Hex and rgba values live only in this file.
+  Source: reference/spark-admin-theme/assets/css/main.css section 2,
+  plus the named roles in context/ui-context.md.
+*/
+:root {
+  --bg-canvas: #f4f6f5;
+  --card-background: #ffffff;
+  --brand-forest-dark: #051c12;
+  --brand-forest-medium: #072f1f;
+  --brand-forest-light: #1a3e30;
+  --brand-lime: #b4f105;
+  --brand-lime-hover: #c1f824;
+  --brand-lime-translucent: rgba(180, 241, 5, 0.15);
+  --text-main: #0b130f;
+  --text-muted-green: #6c7e75;
+  --text-placeholder: rgba(108, 126, 117, 0.5);
+  --text-sidebar-muted: #879a91;
+  --border-light: #e9efef;
+  --border-dark-green: rgba(255, 255, 255, 0.1);
+  --sys-green: #22c55e;
+  --sys-green-bg: #dcfce7;
+  --sys-red: #ef4444;
+  --sys-red-bg: #fee2e2;
+  --sys-orange: #f97316;
+  --sys-orange-bg: #ffedd5;
+  --bg-promo: #e2e8df;
+
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  --sidebar-width: 280px;
+  --sidebar-width-collapsed: 80px;
+  --navbar-height: 80px;
+  --drawer-width: 420px;
+
+  --radius-xxl: 24px;
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  --radius-full: 9999px;
+
+  --shadow-spark-sm: 0 2px 8px rgba(11, 19, 15, 0.02);
+  --shadow-spark-md: 0 10px 30px rgba(11, 19, 15, 0.04);
+  --shadow-spark-lg: 0 20px 50px rgba(11, 19, 15, 0.08);
+
+  /* Surfaces and rings taken from later sections of main.css */
+  --surface-muted: #f8faf9;
+  --surface-hover: #eef2f0;
+  --ink: #000000;
+  --sys-red-hover: #dc2626;
+  --border-input: rgba(11, 19, 15, 0.12);
+  --border-subtle: rgba(11, 19, 15, 0.06);
+  --border-table: rgba(11, 19, 15, 0.08);
+  --ring-focus: rgba(7, 47, 31, 0.08);
+  --ring-focus-strong: rgba(7, 47, 31, 0.15);
+  --ring-danger: rgba(239, 68, 68, 0.08);
+  --ring-success: rgba(34, 197, 94, 0.08);
+  --badge-success-bg: rgba(34, 197, 94, 0.1);
+  --badge-pending-bg: rgba(249, 115, 22, 0.1);
+  --badge-failed-bg: rgba(239, 68, 68, 0.1);
+  --table-row-hover: rgba(180, 241, 5, 0.03);
+  --overlay: rgba(5, 28, 18, 0.4);
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+}
