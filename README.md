@@ -2,7 +2,29 @@
 
 Multi-category ecommerce site (electronics, fashion, home) with a shopping assistant. Spec source of truth: [`ecommerce-rag-spec/`](ecommerce-rag-spec/README.md).
 
-This repository currently holds the **folder skeleton only**. No unit is implemented. The first unit to build is **P1-01** (Vite client + Express server, health check). Phase 2 does not start until every Phase 1 unit is complete.
+P1-01 is the running scaffold: a Vite client and an Express server with `GET /api/health`. No storefront features yet. Phase 2 does not start until every Phase 1 unit is complete.
+
+## Run locally
+
+Use two terminals. Copy `server/.env.example` to `server/.env` before the first server start (values are placeholders; Mongo and Cloudinary are unused until later units).
+
+```powershell
+cd server
+npm install
+npm run dev
+```
+
+```powershell
+cd client
+npm install
+npm run dev
+```
+
+- Client: http://localhost:5173 (placeholder text on the canvas color)
+- Health, direct: http://localhost:5000/api/health
+- Health, through the Vite proxy: http://localhost:5173/api/health
+
+Both return `{ "data": { "status": "ok" } }`.
 
 ## What the product is
 
