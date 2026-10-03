@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "lint": "eslint .",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "seed:admin": "node src/scripts/seedAdmin.js"
+    "seed:admin": "node src/scripts/seedAdmin.js",
+    "seed:catalog": "node src/scripts/seedCatalog.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
