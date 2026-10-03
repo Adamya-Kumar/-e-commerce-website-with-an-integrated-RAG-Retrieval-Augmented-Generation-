@@ -1,0 +1,30 @@
+---
+description: After each finished Spark Commerce unit, print git add/commit/push commands and do not run them
+alwaysApply: true
+---
+
+# After each unit: print git commands
+
+When a build-plan unit (P1-xx or P2-xx) is implemented and its verify checklist passes:
+
+- Do **not** run `git add`, `git commit`, or `git push`.
+- Do **not** stage files unless the user explicitly says to execute git.
+- End the turn with copy-paste PowerShell commands and a commit message.
+
+## Commit message
+
+`Feature: <unit id> <short name>: pass`
+
+Example: `Feature: P1-01 Monorepo scaffold and health checks: pass`
+
+## Commands to print
+
+Use the current branch. On Windows PowerShell, use a simple `-m` string (no bash HEREDOC). List only files that belong to that unit.
+
+```powershell
+git add client/ server/ README.md
+git commit -m "Feature: P1-01 Monorepo scaffold and health checks: pass"
+git push -u origin HEAD
+```
+
+Omit secrets (`.env*`), build output (`dist/`, `node_modules/`), `chatbot/data/*` contents, and anything gitignored. `.env.example` may be included.
