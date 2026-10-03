@@ -35,5 +35,8 @@ relevant file before continuing.
   pages). Port its look; never invent new colors, radii or fonts.
 - Work on exactly one unit per session. Do not exceed the unit's scope.
 - When a unit is verified, do not run git. End the reply with copy-paste
-  PowerShell `git add`, `git commit -m "Feature: <unit id> <short name>: pass"`,
-  and `git push -u origin HEAD`. See `.cursor/rules/after-unit-git.mdc`.
+  PowerShell that creates `feat/<unit-id>-<slug>` from latest `main`, then
+  `git add`, `git commit -m "Feature: <unit id> <short name>: pass"`, and
+  `git push -u origin HEAD`. One GitHub branch per unit. See
+  `.cursor/rules/after-unit-git.mdc` and the branch list in
+  `context/specs/00-build-plan.md`.
