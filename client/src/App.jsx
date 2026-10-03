@@ -1,7 +1,14 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import HomePage from './pages/HomePage.jsx';
+import UiKitPage from './pages/dev/UiKitPage.jsx';
+
 export default function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas">
-      <p>Spark Commerce</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dev/ui" element={<UiKitPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
