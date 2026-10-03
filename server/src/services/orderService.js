@@ -1,4 +1,5 @@
 import {
+  ADMIN_NEXT_STATUSES,
   CANCELLABLE_STATUSES,
   RETURN_WINDOW_DAYS,
   shippingFeeForSubtotal,
@@ -9,6 +10,7 @@ import { Product } from '../models/Product.js';
 import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../utils/logger.js';
+import { pageMeta } from '../utils/pagination.js';
 import { unitPricePaise } from '../utils/pricing.js';
 
 const RETURN_WINDOW_MS = RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000;
@@ -188,6 +190,82 @@ export async function requestReturn(userId, orderId, { reason }) {
   );
   if (!updated) {
     throw ApiError.conflict('Order cannot be returned');
+  }
+  return updated.toJSON();
+}
+
+/**
+ * @param {{ status?: string, page: number, limit: number }} query
+ */
+export async function listAdminOrders(query) {
+  const filter = {};
+  if (query.status) {
+    filter.status = query.status;
+  }
+  const [total, orders] = await Promise.all([
+    Order.countDocuments(filter),
+    Order.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .populate('user', 'name email'),
+  ]);
+  return {
+    orders: orders.map((order) => order.toJSON()),
+    meta: pageMeta(query, total),
+  };
+}
+
+/** @param {string} orderId */
+export async function getAdminOrder(orderId) {
+  const order = await Order.findById(orderId).populate('user', 'name email');
+  if (!order) {
+    throw ApiError.notFound('Order not found');
+  }
+  return order.toJSON();
+}
+
+/**
+ * Move an order one legal step. Cancel restores stock. Terminal statuses cannot change.
+ * @param {string} orderId
+ * @param {{ status: string, note?: string }} input
+ */
+export async function updateOrderStatus(orderId, { status, note }) {
+  const current = await Order.findById(orderId);
+  if (!current) {
+    throw ApiError.notFound('Order not found');
+  }
+
+  const allowed = ADMIN_NEXT_STATUSES[current.status] ?? [];
+  if (!allowed.includes(status)) {
+    throw ApiError.conflict('Illegal status transition', {
+      from: current.status,
+      to: status,
+    });
+  }
+
+  const updated = await Order.findOneAndUpdate(
+    { _id: orderId, status: current.status },
+    {
+      $set: {
+        status,
+        ...(status === 'cancelled' && note ? { cancelReason: note } : {}),
+      },
+      $push: {
+        timeline: {
+          status,
+          at: new Date(),
+          note: note || `Status changed to ${status}`,
+        },
+      },
+    },
+    { returnDocument: 'after' },
+  );
+  if (!updated) {
+    throw ApiError.conflict('Illegal status transition');
+  }
+  if (status === 'cancelled') {
+    await restoreStock(updated.items);
   }
   return updated.toJSON();
 }
