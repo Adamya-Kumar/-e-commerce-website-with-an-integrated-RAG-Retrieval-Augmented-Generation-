@@ -1,8 +1,11 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import adminRouter from './routes/admin.js';
+import authRouter from './routes/auth.js';
 import healthRouter from './routes/health.js';
 
 const app = express();
@@ -16,8 +19,13 @@ app.use(
   }),
 );
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(cookieParser());
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
 app.use('/api', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
