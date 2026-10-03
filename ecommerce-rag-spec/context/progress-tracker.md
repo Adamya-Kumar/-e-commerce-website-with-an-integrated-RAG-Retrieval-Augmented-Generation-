@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-05 Catalog API and seed data.
+- P1-06 Cart and Order API (COD).
 
 ## Completed
 
@@ -16,6 +16,7 @@ Update this file after every meaningful implementation change.
 - P1-02 Spark tokens and UI kit. CSS variables in `client/src/styles/tokens.css`, Tailwind maps them, Plus Jakarta Sans and Bootstrap Icons load, and `/dev/ui` renders the base kit (buttons, forms, badges, table, modal, drawer, dropdown, toast, pagination, skeleton, empty state, spinner). No API calls. ESLint and `npm run build` pass. No hex colors in `client/src/components`.
 - P1-03 Server foundation and models. Server connects to MongoDB database `spark-commerce`, logs listen with pino, and unknown routes return `{ error: { code: 'NOT_FOUND', message } }`. Zod `validate` returns 422 `{ error: { code: 'VALIDATION_ERROR', details } }`. Models: User, Category, Product, Cart, Order. Indexes: unique email, unique slugs, Product text index (`title`, `description`, `tags`, `brand`), unique cart user, order user. ESLint passes. ChatSession stays in P2-08.
 - P1-04 Auth API. `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me`. JWT (7d) is an httpOnly `token` cookie (`SameSite=Lax`, `Secure` in production). `requireAuth` also accepts `Authorization: Bearer`. Public register always creates `customer`. `requireRole` guards `GET /api/admin/ping` until P1-07. Login and register are rate limited (10 per 15 minutes per IP; skipped when `NODE_ENV=test`). `npm run seed:admin` upserts an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Responses omit `passwordHash`. Jest + Supertest: 8 passed. ESLint passes.
+- P1-05 Catalog API and seed data. `GET /api/categories`, `GET /api/products` (`q`, `category`, `brand`, `minPrice`, `maxPrice`, `inStock`, `sort`, `page`, `limit`), and `GET /api/products/:slug`. Public lists return only `isActive` records. Search uses the product text index. Sort values: `relevance`, `price_asc`, `price_desc`, `newest`. List responses include `meta` (`page`, `limit`, `total`, `totalPages`). `npm run seed:catalog` upserts 6 categories and 60 products by slug (placeholder image URLs). Jest + Supertest: 13 passed. ESLint passes.
 
 ## In Progress
 
@@ -23,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-- P1-05 Catalog API and seed data (`context/specs/phase-1-website.md`).
+- P1-06 Cart and Order API (COD) (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 
@@ -49,5 +50,6 @@ Update this file after every meaningful implementation change.
 - `react-router-dom` now serves `/` and `/dev/ui`. Full storefront and admin routing stays in P1-08. JWT and Cloudinary env names are in `server/.env.example`; those integrations start in later units.
 - P1-03 verified: MongoDB connected to `spark-commerce`; `GET /api/health` still returns `{ data: { status: 'ok' } }`; `GET /api/does-not-exist` returns HTTP 404 `{ error: { code: 'NOT_FOUND', message: 'Cannot GET /api/does-not-exist' } }`. A request that fails zod returns HTTP 422 with `details` for each field. Index list includes `email_1` (unique), Category and Product `slug_1` (unique), `ProductTextIndex`, Cart `user_1` (unique), Order `user_1`. Slug helper turns "Noise Cancelling Headphones" into `noise-cancelling-headphones`. Pino logs `Server listening`. Morgan still logs requests. The verification server was stopped after the checks.
 - P1-04 verified with `npm test` in `server/` (8 passed) against `spark-commerce-test`, plus `npm run lint`. Covered: register/login/logout/me, duplicate email 409, wrong password 401, customer 403 on `GET /api/admin/ping`, bearer token, no `passwordHash` in JSON, Secure cookie when `NODE_ENV=production`, and 429 after the auth attempt cap. `npm run seed:admin` run twice on `spark-commerce-test` kept the same user id. Test users matching `@auth.test` were deleted afterward.
+- P1-05 verified with `npm test` in `server/` (13 passed, including the auth suite) against `spark-commerce-test`, plus `npm run lint`. `GET /api/products?q=laptop&maxPrice=6000000&sort=price_asc` returns the six laptops at or under ₹60,000, cheapest first, with `meta`. `GET /api/products/missing-product` returns HTTP 404 `{ error: { code: 'NOT_FOUND', message: 'Product not found' } }`. An inactive product is omitted from search and detail. `npm run seed:catalog` run twice on `spark-commerce-test` kept 6 categories and 60 products. That seed data is still in `spark-commerce-test`. Run `npm run seed:catalog` without `MONGO_DB_NAME` to load the same catalog into `spark-commerce`.
 - After each verified unit, print git add / commit / push commands and do not run them (`.cursor/rules/after-unit-git.mdc`).
 - Each unit is its own GitHub branch `feat/<unit-id>-<slug>`, created from latest `main` when that unit is verified. Names are in `context/specs/00-build-plan.md`. Branches are not created ahead of time, because later units depend on earlier ones merged to `main`.
