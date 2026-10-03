@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
 import { Cart, Category, Order, Product, User } from '../models/index.js';
 
-const DB_NAME = 'spark-commerce';
+const DB_NAME = process.env.MONGO_DB_NAME || 'spark-commerce';
 
 export async function connectDb() {
   const uri = process.env.MONGO_URI;

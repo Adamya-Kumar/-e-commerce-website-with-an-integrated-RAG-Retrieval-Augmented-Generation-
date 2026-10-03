@@ -13,5 +13,11 @@ export default [
       globals: globals.node,
     },
   },
+  {
+    files: ['tests/**/*.js', '**/*.test.js'],
+    languageOptions: {
+      globals: globals.jest,
+    },
+  },
   prettier,
 ];

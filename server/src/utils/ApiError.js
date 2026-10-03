@@ -42,4 +42,9 @@ export class ApiError extends Error {
   static validation(message = 'Validation failed', details) {
     return new ApiError(422, 'VALIDATION_ERROR', message, details);
   }
+
+  /** @param {string} [message] */
+  static tooManyRequests(message = 'Too many attempts. Try again later.') {
+    return new ApiError(429, 'TOO_MANY_REQUESTS', message);
+  }
 }
