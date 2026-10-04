@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-10 Wire catalog to the API. In progress: TanStack Query hooks, URL-bound filters, debounced search, sort, pagination, and product detail by slug.
+- P1-11 Cart and checkout. In progress: cart context, mini-cart badge, address selection/creation, COD review, and success state after placing an order.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-10 Wire catalog to the API. TanStack Query hooks, URL filters, debounced search, sort, pagination, and product detail by slug.
+- P1-11 Cart and checkout. Cart context, guest redirects, cart badge, address selection, COD checkout flow, order success state, and stock-conflict handling.
 
 ## Next Up
 

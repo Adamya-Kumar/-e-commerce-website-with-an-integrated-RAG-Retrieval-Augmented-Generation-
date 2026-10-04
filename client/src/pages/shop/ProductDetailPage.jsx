@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { isNotFoundError, useProduct } from '../../api/products.js';
 import { apiErrorMessage } from '../../api/http.js';
 import CatalogError from '../../components/shop/CatalogError.jsx';
@@ -8,13 +8,17 @@ import PriceBlock from '../../components/shop/PriceBlock.jsx';
 import ProductGallery from '../../components/shop/ProductGallery.jsx';
 import QuantityStepper from '../../components/shop/QuantityStepper.jsx';
 import Button from '../../components/ui/Button.jsx';
+import { useCart } from '../../context/useCart.js';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const productQuery = useProduct(slug);
+  const { addItem } = useCart();
   const product = productQuery.data;
   const [qty, setQty] = useState(1);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     setQty(1);
@@ -48,6 +52,20 @@ export default function ProductDetailPage() {
         onRetry={() => productQuery.refetch()}
       />
     );
+  }
+
+  async function handleAddToCart() {
+    if (soldOut) return;
+    setAdding(true);
+    try {
+      await addItem(product.id, qty);
+    } catch (error) {
+      if (error?.message === 'UNAUTHENTICATED') {
+        navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
+      }
+    } finally {
+      setAdding(false);
+    }
   }
 
   const soldOut = product.stock < 1;
@@ -95,8 +113,8 @@ export default function ProductDetailPage() {
               disabled={soldOut}
               onChange={setQty}
             />
-            <Button variant="accent" className="sm:flex-1" disabled={soldOut}>
-              Add to cart
+            <Button variant="accent" className="sm:flex-1" disabled={soldOut || adding} onClick={handleAddToCart}>
+              {adding ? 'Adding…' : 'Add to cart'}
             </Button>
           </div>
         </div>

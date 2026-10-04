@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
+import { useCart } from '../../context/useCart.js';
 import { patchCatalogSearch } from '../../lib/catalogParams.js';
 import { cn } from '../ui/cn.js';
 
@@ -8,6 +9,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export default function StorefrontNavbar() {
   const { user, logout } = useAuth();
+  const { count } = useCart();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -109,12 +111,12 @@ export default function StorefrontNavbar() {
 
         <Link
           to="/cart"
-          aria-label="Cart, 0 items"
+          aria-label={`Cart, ${count} items`}
           className="relative inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-light bg-card text-[1.15rem] text-main shadow-spark-sm transition duration-200 ease-in-out hover:text-forest-medium"
         >
           <i className="bi bi-bag" />
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-lime px-1 text-[0.65rem] font-bold text-forest-dark">
-            0
+            {count}
           </span>
         </Link>
 
