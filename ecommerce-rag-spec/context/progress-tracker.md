@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-10 Wire catalog to the API.
+- P1-10 Wire catalog to the API. In progress: TanStack Query hooks, URL-bound filters, debounced search, sort, pagination, and product detail by slug.
 
 ## Completed
 
@@ -24,11 +24,11 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- None.
+- P1-10 Wire catalog to the API. TanStack Query hooks, URL filters, debounced search, sort, pagination, and product detail by slug.
 
 ## Next Up
 
-- P1-10 Wire catalog to the API (`context/specs/phase-1-website.md`).
+- P1-11 Cart and checkout (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 

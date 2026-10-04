@@ -1,33 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import CatalogEmpty from '../../components/shop/CatalogEmpty.jsx';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { isNotFoundError, useProduct } from '../../api/products.js';
+import { apiErrorMessage } from '../../api/http.js';
 import CatalogError from '../../components/shop/CatalogError.jsx';
 import DetailSkeleton from '../../components/shop/DetailSkeleton.jsx';
 import PriceBlock from '../../components/shop/PriceBlock.jsx';
 import ProductGallery from '../../components/shop/ProductGallery.jsx';
 import QuantityStepper from '../../components/shop/QuantityStepper.jsx';
 import Button from '../../components/ui/Button.jsx';
-import { PLACEHOLDER_PRODUCTS } from '../../data/placeholderCatalog.js';
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const product = PLACEHOLDER_PRODUCTS.find((entry) => entry.slug === slug);
-  const view = params.get('view');
+  const productQuery = useProduct(slug);
+  const product = productQuery.data;
   const [qty, setQty] = useState(1);
 
   useEffect(() => {
     setQty(1);
   }, [slug]);
 
-  function clearView() {
-    const next = new URLSearchParams(params);
-    next.delete('view');
-    setParams(next, { replace: true });
-  }
-
-  if (view === 'loading') {
+  if (productQuery.isPending) {
     return (
       <div aria-busy="true" aria-live="polite">
         <span className="sr-only">Loading product</span>
@@ -36,30 +29,31 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (view === 'empty') {
+  if (productQuery.isError && isNotFoundError(productQuery.error)) {
     return (
-      <CatalogEmpty
-        title="Nothing to show"
-        description="This product has no gallery or details in the placeholder catalog."
+      <CatalogError
+        title="Product not found"
+        description="That link does not match a product in the catalog."
+        actionLabel="Browse products"
+        onRetry={() => navigate('/products')}
       />
     );
   }
 
-  if (view === 'error' || !product) {
+  if (productQuery.isError || !product) {
     return (
       <CatalogError
         title="Couldn't load this product"
-        description="Check the link or go back to the catalog."
-        onRetry={() => {
-          if (product) clearView();
-          else navigate('/products');
-        }}
+        description={apiErrorMessage(productQuery.error)}
+        onRetry={() => productQuery.refetch()}
       />
     );
   }
 
   const soldOut = product.stock < 1;
-  const attributes = Object.entries(product.attributes);
+  const attributes = Object.entries(product.attributes || {});
+  const categoryName =
+    product.category && typeof product.category === 'object' ? product.category.name : '';
 
   return (
     <div>
@@ -71,11 +65,11 @@ export default function ProductDetailPage() {
         Products
       </Link>
       <div className="grid items-start gap-8 lg:grid-cols-2">
-        <ProductGallery product={product} />
+        <ProductGallery key={product.id} product={product} />
         <div>
           <p className="text-sm font-semibold text-muted-green">{product.brand}</p>
           <h1 className="mt-2 text-[1.75rem] font-bold tracking-[-0.03em] text-main">{product.title}</h1>
-          <p className="mt-2 text-sm text-muted-green">{product.category}</p>
+          {categoryName ? <p className="mt-2 text-sm text-muted-green">{categoryName}</p> : null}
           <div className="mt-6">
             <PriceBlock price={product.price} discountPercent={product.discountPercent} size="detail" />
           </div>

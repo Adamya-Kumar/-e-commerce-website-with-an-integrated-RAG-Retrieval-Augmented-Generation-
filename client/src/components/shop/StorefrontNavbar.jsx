@@ -1,12 +1,19 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
+import { patchCatalogSearch } from '../../lib/catalogParams.js';
 import { cn } from '../ui/cn.js';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function StorefrontNavbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [searchText, setSearchText] = useState(() => params.get('q') || '');
+  const searchTextRef = useRef(searchText);
+  searchTextRef.current = searchText;
   const rootRef = useRef(null);
   const menuId = useId();
 
@@ -26,6 +33,38 @@ export default function StorefrontNavbar() {
     };
   }, [open]);
 
+  const queryFromUrl = params.get('q') || '';
+
+  const applySearch = useCallback(
+    (raw) => {
+      const nextQ = raw.trim();
+      const current = new URLSearchParams(window.location.search);
+      const currentQ = current.get('q') || '';
+      if (nextQ === currentQ) return;
+      const next = patchCatalogSearch(current, { q: nextQ });
+      const search = next.toString();
+      if (window.location.pathname === '/products') {
+        navigate({ pathname: '/products', search }, { replace: true });
+        return;
+      }
+      if (nextQ) {
+        navigate({ pathname: '/products', search });
+      }
+    },
+    [navigate],
+  );
+
+  useEffect(() => {
+    setSearchText(queryFromUrl);
+  }, [queryFromUrl]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      applySearch(searchTextRef.current);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchText, applySearch]);
+
   async function onLogout() {
     setOpen(false);
     try {
@@ -44,11 +83,19 @@ export default function StorefrontNavbar() {
           <span className="hidden sm:inline">Spark Commerce</span>
         </Link>
 
-        <form className="relative min-w-0 flex-1" onSubmit={(event) => event.preventDefault()}>
+        <form
+          className="relative min-w-0 flex-1"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applySearch(searchText);
+          }}
+        >
           <input
             type="search"
             placeholder="Search products"
             aria-label="Search products"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
             className="w-full rounded-full border border-light bg-card py-2.5 pl-4 pr-11 text-sm font-medium text-main shadow-spark-sm outline-none transition duration-200 ease-in-out placeholder:text-placeholder focus:border-forest-medium focus:shadow-focus"
           />
           <button

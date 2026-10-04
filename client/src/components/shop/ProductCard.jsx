@@ -9,7 +9,7 @@ export default function ProductCard({ product }) {
   return (
     <article className="flex h-full flex-col rounded-xl bg-card p-4 shadow-spark-md">
       <Link to={`/products/${product.slug}`} className="block">
-        <ProductImage icon={product.icon} label={product.title} />
+        <ProductImage src={product.images?.[0]?.url} label={product.title} />
         <h3 className="mt-3 text-base font-bold text-main">{product.title}</h3>
         <p className="mt-1 text-sm text-muted-green">{product.brand}</p>
       </Link>

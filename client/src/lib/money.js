@@ -16,6 +16,15 @@ export function rupeesToPaise(rupees) {
   return Math.round(amount * 100);
 }
 
+/** @param {string | number | null | undefined} paise */
+export function paiseToRupeeInput(paise) {
+  if (paise === '' || paise == null) return '';
+  const amount = Number(paise);
+  if (!Number.isFinite(amount)) return '';
+  const rupees = amount / 100;
+  return Number.isInteger(rupees) ? String(rupees) : String(rupees);
+}
+
 /** @param {number} paise */
 export function formatInr(paise) {
   const rupees = paise / 100;

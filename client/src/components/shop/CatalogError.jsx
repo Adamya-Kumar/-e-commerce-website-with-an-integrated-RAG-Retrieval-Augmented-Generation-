@@ -2,7 +2,7 @@ import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 
-export default function CatalogError({ title, description, onRetry }) {
+export default function CatalogError({ title, description, onRetry, actionLabel = 'Try again' }) {
   return (
     <Card>
       <EmptyState
@@ -10,9 +10,11 @@ export default function CatalogError({ title, description, onRetry }) {
         title={title}
         description={description}
         action={
-          <Button variant="primary" onClick={onRetry}>
-            Try again
-          </Button>
+          onRetry ? (
+            <Button variant="primary" onClick={onRetry}>
+              {actionLabel}
+            </Button>
+          ) : null
         }
       />
     </Card>

@@ -1,27 +1,24 @@
-import { PLACEHOLDER_CATEGORIES } from '../../data/placeholderCatalog.js';
 import Input from '../ui/Input.jsx';
 import Select from '../ui/Select.jsx';
 import Button from '../ui/Button.jsx';
+import { paiseToRupeeInput, rupeesToPaise } from '../../lib/money.js';
 
-export default function FilterPanel({ filters, brands, onChange, onClear }) {
+export default function FilterPanel({ filters, categories, brands, onChange, onClear }) {
   function patch(partial) {
-    onChange({ ...filters, ...partial });
+    onChange(partial);
   }
 
   return (
-    <form
-      className="space-y-4"
-      onSubmit={(event) => event.preventDefault()}
-    >
+    <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
       <Select
         id="catalog-category"
         label="Category"
         value={filters.category}
         onChange={(event) => patch({ category: event.target.value })}
       >
-        <option value="All">All categories</option>
-        {PLACEHOLDER_CATEGORIES.map((category) => (
-          <option key={category.slug} value={category.name}>
+        <option value="">All categories</option>
+        {categories.map((category) => (
+          <option key={category.slug} value={category.slug}>
             {category.name}
           </option>
         ))}
@@ -32,7 +29,7 @@ export default function FilterPanel({ filters, brands, onChange, onClear }) {
         value={filters.brand}
         onChange={(event) => patch({ brand: event.target.value })}
       >
-        <option value="All">All brands</option>
+        <option value="">All brands</option>
         {brands.map((brand) => (
           <option key={brand} value={brand}>
             {brand}
@@ -46,8 +43,8 @@ export default function FilterPanel({ filters, brands, onChange, onClear }) {
           type="number"
           min="0"
           inputMode="numeric"
-          value={filters.minRupees}
-          onChange={(event) => patch({ minRupees: event.target.value })}
+          value={paiseToRupeeInput(filters.minPrice)}
+          onChange={(event) => patch({ minPrice: rupeesToPaise(event.target.value) ?? '' })}
         />
         <Input
           id="catalog-max-price"
@@ -55,8 +52,8 @@ export default function FilterPanel({ filters, brands, onChange, onClear }) {
           type="number"
           min="0"
           inputMode="numeric"
-          value={filters.maxRupees}
-          onChange={(event) => patch({ maxRupees: event.target.value })}
+          value={paiseToRupeeInput(filters.maxPrice)}
+          onChange={(event) => patch({ maxPrice: rupeesToPaise(event.target.value) ?? '' })}
         />
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold text-main">
