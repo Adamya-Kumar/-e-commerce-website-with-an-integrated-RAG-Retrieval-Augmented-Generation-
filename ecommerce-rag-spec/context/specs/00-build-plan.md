@@ -84,6 +84,8 @@ Create the branch from the latest `main` when the unit is verified, then push it
 - example:  git checkout main
 git pull origin main
 git checkout -b `name of feature`
-git add `add relevent file only`
+git add .
 git commit -m "Feature/Bug/Fix/Error:<text_mesage>:pass/fail/wip"
 git push -u origin HEAD
+
+- example github display message like this `Feature: P1-07 Admin API and Cloudinary uploads: pass`
