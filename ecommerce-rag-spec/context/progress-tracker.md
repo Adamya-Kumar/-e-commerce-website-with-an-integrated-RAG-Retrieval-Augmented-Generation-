@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-12 Customer account. In progress: orders list/detail with timeline, cancel and return flows, address book management, and profile.
+- P1-13 Admin UI. In progress: admin dashboard, product and category management, orders queue, and chart-backed reporting.
 
 ## Completed
 
@@ -24,11 +24,11 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-12 Customer account. Orders list/detail, status timeline, cancel and return actions, address CRUD, and profile screen.
+- P1-13 Admin UI. Dashboard stats, product CRUD, category management, order details, and legal status transitions.
 
 ## Next Up
 
-- P1-12 Customer account (`context/specs/phase-1-website.md`).
+- P1-13 Admin UI (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 
