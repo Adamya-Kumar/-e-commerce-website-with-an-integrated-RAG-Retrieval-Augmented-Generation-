@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-11 Cart and checkout. In progress: cart context, mini-cart badge, address selection/creation, COD review, and success state after placing an order.
+- P1-12 Customer account. In progress: orders list/detail with timeline, cancel and return flows, address book management, and profile.
 
 ## Completed
 
@@ -24,11 +24,11 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-11 Cart and checkout. Cart context, guest redirects, cart badge, address selection, COD checkout flow, order success state, and stock-conflict handling.
+- P1-12 Customer account. Orders list/detail, status timeline, cancel and return actions, address CRUD, and profile screen.
 
 ## Next Up
 
-- P1-11 Cart and checkout (`context/specs/phase-1-website.md`).
+- P1-12 Customer account (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 
