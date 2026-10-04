@@ -77,3 +77,13 @@ Create the branch from the latest `main` when the unit is verified, then push it
 - UI shells before real data: P1-09 (placeholder) before P1-10 (real).
 - Dependencies installed just in time: each spec lists the packages it first needs.
 - Phase 2 starts only after Phase 1 exit criteria are met.
+
+
+## After Every unit Completation
+- give me git commad and make seprate branch of each feature 
+- example:  git checkout main
+git pull origin main
+git checkout -b `name of feature`
+git add `add relevent file only`
+git commit -m "Feature/Bug/Fix/Error:<text_mesage>:pass/fail/wip"
+git push -u origin HEAD
