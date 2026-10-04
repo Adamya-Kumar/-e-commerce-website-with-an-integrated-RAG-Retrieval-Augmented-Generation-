@@ -36,6 +36,9 @@ export default {
         'badge-failed': 'var(--badge-failed-bg)',
         'table-hover': 'var(--table-row-hover)',
         overlay: 'var(--overlay)',
+        navbar: 'var(--bg-navbar)',
+        'sidebar-hover': 'var(--sidebar-link-hover)',
+        'sidebar-active': 'var(--sidebar-link-active)',
       },
       borderColor: {
         light: 'var(--border-light)',
@@ -67,6 +70,11 @@ export default {
         sidebar: 'var(--sidebar-width)',
         'sidebar-collapsed': 'var(--sidebar-width-collapsed)',
         drawer: 'var(--drawer-width)',
+      },
+      spacing: {
+        sidebar: 'var(--sidebar-width)',
+        'sidebar-collapsed': 'var(--sidebar-width-collapsed)',
+        navbar: 'var(--navbar-height)',
       },
       height: {
         navbar: 'var(--navbar-height)',

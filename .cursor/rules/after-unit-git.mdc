@@ -19,12 +19,17 @@ Example: `Feature: P1-01 Monorepo scaffold and health checks: pass`
 
 ## Commands to print
 
-Use the current branch. On Windows PowerShell, use a simple `-m` string (no bash HEREDOC). List only files that belong to that unit.
+One GitHub branch per unit, named `feat/<unit-id>-<slug>` (list in `ecommerce-rag-spec/context/specs/00-build-plan.md`). Create it from the latest `main` when that unit is verified. Do not reuse `main` for feature work, and do not create later unit branches before earlier units are merged.
+
+On Windows PowerShell, use a simple `-m` string (no bash HEREDOC). List only files that belong to that unit.
 
 ```powershell
+git checkout main
+git pull origin main
+git checkout -b feat/p1-01-monorepo-scaffold
 git add client/ server/ README.md
 git commit -m "Feature: P1-01 Monorepo scaffold and health checks: pass"
 git push -u origin HEAD
 ```
 
-Omit secrets (`.env*`), build output (`dist/`, `node_modules/`), `chatbot/data/*` contents, and anything gitignored. `.env.example` may be included.
+Omit secrets (`.env*`), build output (`dist/`, `node_modules/`), `chatbot/data/*` contents, and anything gitignored. `.env.example` may be included. Remote: `origin` on GitHub.

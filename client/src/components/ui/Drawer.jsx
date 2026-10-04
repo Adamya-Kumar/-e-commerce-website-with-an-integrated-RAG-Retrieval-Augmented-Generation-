@@ -24,7 +24,7 @@ export default function Drawer({ open, title, children, onClose }) {
         open ? 'pointer-events-auto' : 'pointer-events-none invisible',
       )}
       aria-hidden={!open}
-      inert={open ? undefined : true}
+      inert={open ? undefined : ''}
     >
       <button
         type="button"

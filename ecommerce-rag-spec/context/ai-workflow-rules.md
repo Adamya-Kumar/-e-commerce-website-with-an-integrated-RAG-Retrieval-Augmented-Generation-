@@ -40,10 +40,18 @@ Spec-driven and incremental. The context files and the unit spec are the only so
 - [ ] `progress-tracker.md` updated.
 - [ ] Branch `feat/<unit-id>-<name>` ready to push.
 
+## One GitHub branch per feature
+Each unit in `context/specs/00-build-plan.md` gets its own branch on GitHub (`origin`), created from the latest `main` only when that unit is verified. Do not commit feature work on `main`. Do not open a later unit's branch before the branches it depends on are merged, because those units build on earlier code.
+
+Branch name: `feat/<unit-id>-<slug>` (example `feat/p1-01-monorepo-scaffold`). The slug for every unit is listed in `00-build-plan.md`.
+
 ## Git commands after every completed unit
 Do not run git. After the unit is verified, end the reply with copy-paste PowerShell commands only:
 
 ```powershell
+git checkout main
+git pull origin main
+git checkout -b feat/<unit-id>-<slug>
 git add <paths for this unit>
 git commit -m "Feature: <unit id> <short name>: pass"
 git push -u origin HEAD

@@ -37,6 +37,38 @@ Written before any code, so the whole system is designed up front. Update if a u
 | P2-10 | Evaluation + safety | golden set, metrics, fixes | chatbot | P2-09 |
 | P2-11 | Deployment + hardening | compose, limits, logs, README | all | P2-10 |
 
+## Feature branches (one per unit, on GitHub)
+
+Create the branch from the latest `main` when the unit is verified, then push it to `origin`. Do not create these branches in advance: each unit depends on earlier units already merged to `main`.
+
+| Unit | GitHub branch |
+|---|---|
+| P1-01 | `feat/p1-01-monorepo-scaffold` |
+| P1-02 | `feat/p1-02-spark-tokens-ui-kit` |
+| P1-03 | `feat/p1-03-server-foundation-models` |
+| P1-04 | `feat/p1-04-auth-api` |
+| P1-05 | `feat/p1-05-catalog-api-seed` |
+| P1-06 | `feat/p1-06-cart-order-api` |
+| P1-07 | `feat/p1-07-admin-api-cloudinary` |
+| P1-08 | `feat/p1-08-client-shell-auth` |
+| P1-09 | `feat/p1-09-storefront-shell` |
+| P1-10 | `feat/p1-10-wire-catalog` |
+| P1-11 | `feat/p1-11-cart-checkout` |
+| P1-12 | `feat/p1-12-customer-account` |
+| P1-13 | `feat/p1-13-admin-ui` |
+| P1-14 | `feat/p1-14-hardening-exit` |
+| P2-01 | `feat/p2-01-chatbot-scaffold` |
+| P2-02 | `feat/p2-02-express-internal-api` |
+| P2-03 | `feat/p2-03-knowledge-ingestion` |
+| P2-04 | `feat/p2-04-retrieval-grounded-answers` |
+| P2-05 | `feat/p2-05-express-client-tools` |
+| P2-06 | `feat/p2-06-langgraph-agent` |
+| P2-07 | `feat/p2-07-streaming-chat-api` |
+| P2-08 | `feat/p2-08-express-chat-proxy` |
+| P2-09 | `feat/p2-09-chat-ui` |
+| P2-10 | `feat/p2-10-evaluation-safety` |
+| P2-11 | `feat/p2-11-deployment-hardening` |
+
 ## Ordering rules applied
 
 - Dependencies first: nothing builds on a unit that does not exist yet.

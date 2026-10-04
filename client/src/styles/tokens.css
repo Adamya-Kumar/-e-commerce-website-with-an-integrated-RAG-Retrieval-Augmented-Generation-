@@ -61,6 +61,9 @@
   --badge-failed-bg: rgba(239, 68, 68, 0.1);
   --table-row-hover: rgba(180, 241, 5, 0.03);
   --overlay: rgba(5, 28, 18, 0.4);
+  --bg-navbar: rgba(244, 246, 245, 0.85);
+  --sidebar-link-hover: rgba(255, 255, 255, 0.03);
+  --sidebar-link-active: rgba(255, 255, 255, 0.05);
   --scrollbar-thumb: #cbd5e1;
   --scrollbar-thumb-hover: #94a3b8;
 }
