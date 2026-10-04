@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+
+  server:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -lc "npm install && npm run dev"
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/spark-commerce
+      JWT_SECRET: replace-with-a-long-random-string
+      CLIENT_ORIGIN: http://localhost:5173
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: replace-with-a-long-password
+    depends_on:
+      - mongo
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./server:/app
+
+  client:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - server
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./client:/app
+
+volumes:
+  mongo-data:

@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-13 Admin UI. In progress: admin dashboard, product and category management, orders queue, and chart-backed reporting.
+- P1-14 Hardening and Phase 1 exit. In progress: accessibility pass, metadata and route polish, 404/error states, security review, README setup guidance, and the Phase 1 completion checklist.
 
 ## Completed
 
@@ -24,11 +24,11 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-13 Admin UI. Dashboard stats, product CRUD, category management, order details, and legal status transitions.
+- P1-14 Hardening and Phase 1 exit. Accessibility pass, missing 404/error handling, metadata polish, security checklist, README setup update, and Phase 1 completion verification.
 
 ## Next Up
 
-- P1-13 Admin UI (`context/specs/phase-1-website.md`).
+- P1-14 Hardening and Phase 1 exit (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 

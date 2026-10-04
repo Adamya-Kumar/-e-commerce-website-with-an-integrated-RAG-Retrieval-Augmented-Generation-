@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import AdminRoute from './components/auth/AdminRoute.jsx';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import Spinner from './components/ui/Spinner.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
 import StorefrontLayout from './layouts/StorefrontLayout.jsx';
 
@@ -77,7 +78,7 @@ export default function App() {
           <Route path="orders" element={<AdminOrdersPage />} />
         </Route>
         <Route path="/dev/ui" element={<UiKitPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );
