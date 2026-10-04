@@ -18,6 +18,12 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  *:focus-visible {
+    outline: 2px solid var(--brand-forest-medium);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--ring-focus);
+  }
+
   h1,
   h2,
   h3,

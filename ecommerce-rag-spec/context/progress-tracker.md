@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-12 Customer account. In progress: orders list/detail with timeline, cancel and return flows, address book management, and profile.
+- P1-14 Hardening and Phase 1 exit. In progress: accessibility pass, metadata and route polish, 404/error states, security review, README setup guidance, and the Phase 1 completion checklist.
 
 ## Completed
 
@@ -24,11 +24,11 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-12 Customer account. Orders list/detail, status timeline, cancel and return actions, address CRUD, and profile screen.
+- P1-14 Hardening and Phase 1 exit. Accessibility pass, missing 404/error handling, metadata polish, security checklist, README setup update, and Phase 1 completion verification.
 
 ## Next Up
 
-- P1-12 Customer account (`context/specs/phase-1-website.md`).
+- P1-14 Hardening and Phase 1 exit (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 

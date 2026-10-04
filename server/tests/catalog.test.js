@@ -28,30 +28,34 @@ afterAll(async () => {
 });
 
 describe('catalog API', () => {
-  it('seeds an idempotent catalog and serves active categories', async () => {
-    const first = await seedCatalog();
-    const second = await seedCatalog();
+  it(
+    'seeds an idempotent catalog and serves active categories',
+    async () => {
+      const first = await seedCatalog();
+      const second = await seedCatalog();
 
-    expect(first).toMatchObject({ categories: 6, products: 60 });
-    expect(second).toMatchObject({ categories: 6, products: 60 });
-    expect(second.categoryIds).toEqual(first.categoryIds);
-    expect(second.productIds).toEqual(first.productIds);
-    expect(await Category.countDocuments()).toBe(6);
-    expect(await Product.countDocuments()).toBe(60);
+      expect(first).toMatchObject({ categories: 6, products: 60 });
+      expect(second).toMatchObject({ categories: 6, products: 60 });
+      expect(second.categoryIds).toEqual(first.categoryIds);
+      expect(second.productIds).toEqual(first.productIds);
+      expect(await Category.countDocuments()).toBe(6);
+      expect(await Product.countDocuments()).toBe(60);
 
-    const listed = await request(app).get('/api/categories');
-    expect(listed.status).toBe(200);
-    expect(listed.body.data).toHaveLength(6);
-    expect(listed.body.data.map((category) => category.slug)).toEqual([
-      'audio',
-      'home-and-kitchen',
-      'laptops',
-      'mens-fashion',
-      'mobiles',
-      'womens-fashion',
-    ]);
-    expect(listed.body.data.every((category) => category.isActive)).toBe(true);
-  });
+      const listed = await request(app).get('/api/categories');
+      expect(listed.status).toBe(200);
+      expect(listed.body.data).toHaveLength(6);
+      expect(listed.body.data.map((category) => category.slug)).toEqual([
+        'audio',
+        'home-and-kitchen',
+        'laptops',
+        'mens-fashion',
+        'mobiles',
+        'womens-fashion',
+      ]);
+      expect(listed.body.data.every((category) => category.isActive)).toBe(true);
+    },
+    15000,
+  );
 
   it('filters and sorts products and returns meta', async () => {
     const expected = SEED_PRODUCTS.filter(

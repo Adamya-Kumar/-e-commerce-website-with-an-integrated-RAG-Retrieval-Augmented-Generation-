@@ -6,7 +6,19 @@ P1-01 is the running scaffold: a Vite client and an Express server with `GET /ap
 
 ## Run locally
 
-Use two terminals. Copy `server/.env.example` to `server/.env` before the first server start (values are placeholders; Mongo and Cloudinary are unused until later units).
+Use two terminals. Copy `server/.env.example` to `server/.env` before the first server start and replace the placeholder values with your local settings.
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `PORT` | Yes | Express port for the API server. |
+| `MONGO_URI` | Yes | MongoDB connection string for the app database. |
+| `JWT_SECRET` | Yes | Secret used to sign the auth JWT and keep customer sessions secure. |
+| `CLIENT_ORIGIN` | Yes | Allowed frontend origin for CORS. |
+| `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary cloud name for image storage. |
+| `CLOUDINARY_API_KEY` | For uploads | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | For uploads | Cloudinary API secret. |
+| `ADMIN_EMAIL` | Yes for admin seeding | Email for the seeded admin account. |
+| `ADMIN_PASSWORD` | Yes for admin seeding | Password for the seeded admin account. |
 
 ```powershell
 cd server
@@ -20,11 +32,15 @@ npm install
 npm run dev
 ```
 
-- Client: http://localhost:5173 (placeholder text on the canvas color)
+- Client: http://localhost:5173
 - Health, direct: http://localhost:5000/api/health
 - Health, through the Vite proxy: http://localhost:5173/api/health
 
 Both return `{ "data": { "status": "ok" } }`.
+
+### Optional local container setup
+
+A dev convenience stack is available at the repo root in `docker-compose.yml` for MongoDB, the API server, and the Vite client. It keeps the same env file pattern as the local setup and is intended for quick local bootstrapping rather than production deployment.
 
 ## What the product is
 
