@@ -7,6 +7,7 @@ from app.rag.ingest import (
     build_product_document,
     get_collection_records,
     get_faiss_index,
+    ingest_full,
     ingest_product_documents,
 )
 
@@ -63,6 +64,56 @@ def test_product_ingestion_upserts_and_removes_stale_rows(monkeypatch, tmp_path)
     assert rows[0]["metadata"]["product_id"] == "prod-2"
     assert "Updated laptop" in rows[0]["document"]
     assert get_faiss_index("products").ntotal == 1
+
+
+def test_full_ingest_paginates_and_is_idempotent(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings, "faiss_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "service_key", "test-service-key")
+    monkeypatch.setattr(
+        "app.rag.ingest._embed_texts",
+        lambda texts: [[float(index % 3 + 1), 1.0] for index, _ in enumerate(texts)],
+    )
+    products = [
+        {"id": "prod-1", "title": "First laptop", "price": 50000, "stock": 3},
+        {"id": "prod-2", "title": "Second laptop", "price": 70000, "stock": 2},
+    ]
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, params, headers, timeout):
+        assert url.endswith("/api/internal/products/export")
+        assert headers == {"X-Service-Key": "test-service-key"}
+        if params.get("cursor") == "page-2":
+            return FakeResponse({"data": products[1:], "hasMore": False})
+        return FakeResponse(
+            {"data": products[:1], "hasMore": True, "nextCursor": "page-2"}
+        )
+
+    monkeypatch.setattr("app.rag.ingest.httpx.get", fake_get)
+
+    first = ingest_full(limit=1)
+    second = ingest_full(limit=1)
+    policy_count = len(build_policy_documents())
+
+    assert first == {
+        "status": "ok",
+        "products": 2,
+        "policies": policy_count,
+        "deleted": 0,
+    }
+    assert second == first
+    assert len(get_collection_records("products")) == 2
+    assert len(get_collection_records("policies")) == policy_count
+    assert get_faiss_index("products").ntotal == 2
+    assert get_faiss_index("policies").ntotal == policy_count
 
 
 def test_ingest_product_route_requires_service_key(monkeypatch) -> None:
