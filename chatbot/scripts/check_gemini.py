@@ -8,15 +8,21 @@ try:
     from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 except ImportError as exc:  # pragma: no cover - dependency install check
     raise SystemExit(
-        "Missing Python dependencies. Install the project dependencies with `pip install -e .` first."
+        "Missing Python dependencies. Install the project dependencies with "
+        "`pip install -e .` first."
     ) from exc
 
 
 def main() -> int:
-    if not settings.google_api_key or not settings.gemini_chat_model or not settings.gemini_embed_model:
+    has_model_config = (
+        settings.google_api_key
+        and settings.gemini_chat_model
+        and settings.gemini_embed_model
+    )
+    if not has_model_config:
         print(
-            "Missing Gemini configuration. Set GOOGLE_API_KEY, GEMINI_CHAT_MODEL, and GEMINI_EMBED_MODEL "
-            "in a local .env file before running this script."
+            "Missing Gemini configuration. Set GOOGLE_API_KEY, GEMINI_CHAT_MODEL, "
+            "and GEMINI_EMBED_MODEL in a local .env file before running this script."
         )
         return 1
 

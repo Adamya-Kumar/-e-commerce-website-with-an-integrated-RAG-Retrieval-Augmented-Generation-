@@ -10,6 +10,7 @@ import authRouter from './routes/auth.js';
 import cartRouter from './routes/cart.js';
 import categoryRouter from './routes/categories.js';
 import healthRouter from './routes/health.js';
+import internalRouter from './routes/internal.js';
 import orderRouter from './routes/orders.js';
 import productRouter from './routes/products.js';
 
@@ -29,6 +30,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 app.use('/api', healthRouter);
+app.use('/api/internal', internalRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/products', productRouter);

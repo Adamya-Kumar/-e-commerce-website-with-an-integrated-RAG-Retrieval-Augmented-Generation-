@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-01 Chatbot service scaffold. In progress: FastAPI startup, config via environment variables, `/health`, `.env.example`, Gemini connectivity check script, and pytest/ruff setup.
+- P2-02 Express internal API for the chatbot. In progress: service-key middleware, a protected `/api/internal/products/export` endpoint, and the fire-and-forget product-change webhook to the chatbot ingest route.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-13 Admin UI. Dashboard, products, categories, and orders screens are implemented. Complete authenticated CRUD and status-transition verification before marking this unit complete.
+- P2-02 Express internal API for the chatbot. Service-key auth, product export pagination, and the `onProductChanged()` sync hook are in progress. Verify the export response contract and the async webhook behavior before closing out this unit.
 
 ## Next Up
 
