@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Phase 1: Website
+- Phase 2: RAG + Agentic Chatbot
 
 ## Current Goal
 
-- P1-13 Admin UI. In progress: dashboard stats/charts, product and category management, and admin order management. Also fixing the customer account order refresh/render issue reported during admin status transitions.
+- P2-01 Chatbot service scaffold. In progress: FastAPI startup, config via environment variables, `/health`, `.env.example`, Gemini connectivity check script, and pytest/ruff setup.
 
 ## Completed
 
