@@ -41,6 +41,7 @@ function padNumber(value) {
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
   return `${padNumber(date.getDate())}/${padNumber(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
@@ -49,7 +50,8 @@ function getOrderId(order) {
 }
 
 function getTimelineDeliveredAt(order) {
-  const entry = (order?.timeline || []).find((item) => item.status === 'delivered');
+  const timeline = Array.isArray(order?.timeline) ? order.timeline : [];
+  const entry = timeline.find((item) => item?.status === 'delivered');
   return entry?.at ? new Date(entry.at) : null;
 }
 
@@ -99,22 +101,34 @@ function OrdersTab() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
       const next = await fetchOrders();
-      setOrders(next);
+      setOrders(Array.isArray(next) ? next : []);
+      setLoadError('');
       setSelectedId((current) => current || (next[0] ? getOrderId(next[0]) : ''));
     } catch (error) {
-      toast.error(apiErrorMessage(error));
+      setLoadError(apiErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     void loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    function refreshOrdersOnFocus() {
+      if (document.visibilityState === 'visible') {
+        void loadOrders();
+      }
+    }
+    window.addEventListener('focus', refreshOrdersOnFocus);
+    return () => window.removeEventListener('focus', refreshOrdersOnFocus);
   }, [loadOrders]);
 
   const selectedOrder = useMemo(
@@ -166,6 +180,17 @@ function OrdersTab() {
     return (
       <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-light bg-card p-6">
         <Spinner label="Loading orders" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-sys-red/30 bg-card p-6 text-sm text-sys-red" role="alert">
+        <p>{loadError}</p>
+        <Button className="mt-4" size="sm" variant="outline" onClick={() => void loadOrders()}>
+          Try again
+        </Button>
       </div>
     );
   }
@@ -287,11 +312,11 @@ function OrdersTab() {
             <div className="mt-6">
               <h4 className="text-lg font-bold text-main">Timeline</h4>
               <ul className="mt-3 space-y-3">
-                {(selectedOrder.timeline || []).map((entry) => (
-                  <li key={`${entry.status}-${entry.at}`} className="flex gap-3 rounded-xl bg-canvas p-3">
+                {(Array.isArray(selectedOrder.timeline) ? selectedOrder.timeline : []).map((entry, index) => (
+                  <li key={`${entry?.status || 'update'}-${entry?.at || index}`} className="flex gap-3 rounded-xl bg-canvas p-3">
                     <span className="mt-1 h-2.5 w-2.5 rounded-full bg-lime" aria-hidden="true" />
                     <div className="flex-1">
-                      <p className="font-semibold capitalize text-main">{entry.status.replace(/_/g, ' ')}</p>
+                      <p className="font-semibold capitalize text-main">{String(entry?.status || 'Order updated').replace(/_/g, ' ')}</p>
                       <p className="text-xs text-muted-green">{entry.note || 'Order updated'} • {formatDate(entry.at)}</p>
                     </div>
                   </li>
