@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-02 Express internal API for the chatbot. In progress: service-key middleware, a protected `/api/internal/products/export` endpoint, and the fire-and-forget product-change webhook to the chatbot ingest route.
+- P2-03 Knowledge ingestion into FAISS + SQLite. In progress: product and policy indexes, SQLite document/metadata storage, the ingestion CLI/API, and the required knowledge markdown corpus for shipping, returns, COD, FAQ, and contact guidance.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-02 Express internal API for the chatbot. Service-key auth, product export pagination, and the `onProductChanged()` sync hook are in progress. Verify the export response contract and the async webhook behavior before closing out this unit.
+- P2-03 Knowledge ingestion into FAISS + SQLite. Product indexing, policy chunking, and the service-key ingestion API are in progress. Verify the export-backed full ingest and the upsert/delete behavior before closing out this unit.
 
 ## Next Up
 
@@ -43,7 +43,7 @@ Update this file after every meaningful implementation change.
 
 - Spark look is applied to the whole site (storefront + admin + chat), via Tailwind with Spark tokens as CSS variables.
 - JavaScript (no TypeScript); Vite + React; Express + Mongoose.
-- Chatbot is a separate Python service (FastAPI + LangGraph); Chroma for retrieval; Gemini for chat + embeddings.
+- Chatbot is a separate Python service (FastAPI + LangGraph); FAISS CPU indexes with SQLite document/metadata storage; Gemini for chat + embeddings.
 - Chatbot acts only through the Express API using the user's token; no direct DB access.
 - Confirmation interrupt required for place order, cancel, return, clear cart.
 - Payments: Cash on Delivery only in v1. Images: Cloudinary.
@@ -52,6 +52,7 @@ Update this file after every meaningful implementation change.
 
 ## Session Notes
 
+- P2-03 vector backend uses FAISS CPU for normalized cosine-search indexes and SQLite for persisted documents and metadata. The chatbot test suite passes (5 tests), Ruff passes, and `requirements.txt` resolves. Full export ingest still requires the Express endpoint and Gemini credentials.
 - P1-13 implemented: live admin dashboard stats, revenue and order-status charts, low-stock table, product search/pagination/create/edit/image upload/activation/delete, category CRUD/activation, and filtered/paginated order management with detail modal and legal next-status transitions. Client lint and production build pass. The API health proxy returns HTTP 200. Authenticated CRUD/status workflows still need verification before P1-13 can be marked complete.
 - Customer account follow-up: order data now refetches on window focus, load failures have a retry state, and timeline/date rendering tolerates incomplete legacy data. Client lint and production build pass; the reported crash was not reproduced with an authenticated customer session.
 - The chart library is lazy-loaded as a separate bundle; Vite still reports the ApexCharts vendor chunk at about 954 KB.
