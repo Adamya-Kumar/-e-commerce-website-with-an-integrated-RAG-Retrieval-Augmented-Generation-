@@ -4,6 +4,7 @@ export default function StatCard({
   label,
   value,
   trend,
+  detail,
   trendDirection = 'up',
 }) {
   const rising = trendDirection === 'up';
@@ -29,6 +30,7 @@ export default function StatCard({
           {trend}
         </p>
       ) : null}
+      {detail ? <p className="mt-2 text-xs text-muted-green">{detail}</p> : null}
     </article>
   );
 }

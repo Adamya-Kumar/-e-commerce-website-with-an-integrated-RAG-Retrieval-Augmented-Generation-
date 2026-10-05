@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P1-14 Hardening and Phase 1 exit. In progress: accessibility pass, metadata and route polish, 404/error states, security review, README setup guidance, and the Phase 1 completion checklist.
+- P1-13 Admin UI. In progress: dashboard stats/charts, product and category management, and admin order management. Also fixing the customer account order refresh/render issue reported during admin status transitions.
 
 ## Completed
 
@@ -24,14 +24,17 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P1-14 Hardening and Phase 1 exit. Accessibility pass, missing 404/error handling, metadata polish, security checklist, README setup update, and Phase 1 completion verification.
+- P1-13 Admin UI. Dashboard, products, categories, and orders screens are implemented. Complete authenticated CRUD and status-transition verification before marking this unit complete.
 
 ## Next Up
 
-- P1-14 Hardening and Phase 1 exit (`context/specs/phase-1-website.md`).
+- P1-13 authenticated workflow verification and close-out (`context/specs/phase-1-website.md`).
 
 ## Open Questions
 
+- P1-10 through P1-12 have no completion/verification entry in this tracker. They remain unverified and are outside this session's requested P1-13 scope.
+- MongoDB Atlas Network Access currently allows `0.0.0.0/0`. Restrict this to trusted development/deployment egress IPs before production; this session did not change Atlas configuration.
+- P1-13 live admin CRUD/status verification needs an authenticated admin session.
 - Product/brand name (working title "Spark Commerce").
 - Agent checkpointer for production: SQLite file is fine for local; decide persistence before deploy (P2-11).
 - Hosting targets for client, server, chatbot.
@@ -49,6 +52,10 @@ Update this file after every meaningful implementation change.
 
 ## Session Notes
 
+- P1-13 implemented: live admin dashboard stats, revenue and order-status charts, low-stock table, product search/pagination/create/edit/image upload/activation/delete, category CRUD/activation, and filtered/paginated order management with detail modal and legal next-status transitions. Client lint and production build pass. The API health proxy returns HTTP 200. Authenticated CRUD/status workflows still need verification before P1-13 can be marked complete.
+- Customer account follow-up: order data now refetches on window focus, load failures have a retry state, and timeline/date rendering tolerates incomplete legacy data. Client lint and production build pass; the reported crash was not reproduced with an authenticated customer session.
+- The chart library is lazy-loaded as a separate bundle; Vite still reports the ApexCharts vendor chunk at about 954 KB.
+- P1-14 is not started; P1-10 through P1-12 remain unverified in this tracker.
 - P1-01 verified: both `npm run dev` processes stay up; the landing page shows “Spark Commerce” on canvas `#F4F6F5`; `/api/health` works directly and via the Vite proxy.
 - P1-02 verified in the browser: `/` still shows “Spark Commerce” on canvas `#F4F6F5`. `/dev/ui` shows the kit. Primary button computes to forest-medium (`rgb(7, 47, 31)`) with 14px radius. Modal confirm, dropdown delete, pagination, toast dismiss, and the drawer open and close. Cards stack on a 390px-wide viewport. No Vite error overlay.
 - `react-router-dom` now serves `/` and `/dev/ui`. Full storefront and admin routing stays in P1-08. JWT and Cloudinary env names are in `server/.env.example`; those integrations start in later units.
