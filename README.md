@@ -58,13 +58,13 @@ Out of v1: online payments, guest cart, reviews, coupons, wishlists, notificatio
 |---|---|---|
 | `client/` | React UI, routing, client state | Secrets; prices or totals as the source of truth |
 | `server/` | Business rules, auth, MongoDB, Cloudinary, chat proxy | LLM or embedding logic |
-| `chatbot/` | Gemini, retrieval, LangGraph, Chroma | MongoDB; trusting a client-supplied price |
+| `chatbot/` | Gemini, retrieval, LangGraph, FAISS + SQLite | MongoDB; trusting a client-supplied price |
 
 Request paths:
 
 - Web: `client → server (cookie JWT) → MongoDB`
 - Chat: `client → server /api/chat (SSE) → chatbot → Express API with the user's token`
-- Catalog sync: admin product change → chatbot ingest → Chroma
+- Catalog sync: admin product change → chatbot ingest → FAISS index + SQLite metadata
 
 ## Layout
 
@@ -91,7 +91,7 @@ ecommerce-rag-spec/          # spec pack (do not treat as app code)
 
 - Client: React 18, Vite, JavaScript, Tailwind (Spark tokens), React Router, TanStack Query
 - Server: Node, Express, Mongoose, zod, JWT in an httpOnly cookie
-- Chatbot: Python 3.11, FastAPI, LangGraph, ChromaDB, Gemini
+- Chatbot: Python 3.11, FastAPI, LangGraph, FAISS, SQLite, Gemini
 - Money: integer paise. Shipping: free above 999 INR, otherwise 49 INR. Payments: COD only.
 
 ## Build order

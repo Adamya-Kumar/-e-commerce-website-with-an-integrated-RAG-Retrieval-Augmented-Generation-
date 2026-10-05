@@ -16,7 +16,7 @@ theme (forest green + lime, Plus Jakarta Sans, large rounded white cards).
 
 - **Phase 1: Website** (React, Node, Express, MongoDB). Fully usable without
   the chatbot.
-- **Phase 2: Chatbot** (Python FastAPI, LangGraph, ChromaDB, Gemini). Added
+- **Phase 2: Chatbot** (Python FastAPI, LangGraph, FAISS + SQLite, Gemini). Added
   after Phase 1 is complete; it uses only the public/internal APIs of Phase 1.
 
 ## Users

@@ -9,7 +9,7 @@ spark-commerce/
 ├── reference/spark-admin-theme/   # read-only visual reference
 ├── client/                  # React (Vite, JavaScript) storefront + admin
 ├── server/                  # Node + Express + Mongoose API
-├── chatbot/                 # Python FastAPI + LangGraph + ChromaDB (Phase 2)
+├── chatbot/                 # Python FastAPI + LangGraph + FAISS + SQLite (Phase 2)
 └── docker-compose.yml       # added in the last unit of each phase
 ```
 
@@ -27,7 +27,7 @@ spark-commerce/
 | Images | Cloudinary | Product image storage (server uploads) |
 | Chatbot service | Python 3.11+, FastAPI, LangGraph | Agent runtime |
 | LLM + embeddings | Google Gemini via `langchain-google-genai` | Chat model + embedding model (IDs from env) |
-| Vector DB | ChromaDB (persistent local dir) | Product + policy retrieval |
+| Vector search | FAISS CPU indexes with SQLite document/metadata storage | Product + policy retrieval; local persistent files |
 | Agent memory | LangGraph SQLite checkpointer | Per-chat-thread state (v1) |
 
 ## System boundaries
@@ -36,14 +36,14 @@ spark-commerce/
 |---|---|---|
 | `client/` | UI, routing, client state | Contain secrets; compute prices/totals as truth |
 | `server/` | All business rules, auth, DB access, Cloudinary, chat proxy | Run LLM or embedding logic |
-| `chatbot/` | LLM calls, retrieval, agent graph, Chroma | Connect to MongoDB; trust any client-supplied price |
+| `chatbot/` | LLM calls, retrieval, agent graph, FAISS + SQLite | Connect to MongoDB; trust any client-supplied price |
 
 ## Request flows
 
 - Web: `client → server (REST, cookie JWT) → MongoDB`.
 - Chat: `client → server /api/chat (SSE proxy) → chatbot /chat (service key + forwarded user token) → LLM`.
 - Agent actions: `chatbot tool → server REST API using the user's forwarded token` (same endpoints and authorization as the UI).
-- Catalog sync: `server (admin product change) → chatbot /ingest/product (service key) → Chroma`.
+- Catalog sync: `server (admin product change) → chatbot /ingest/product (service key) → FAISS index + SQLite metadata`.
 
 ## Storage model
 
@@ -51,7 +51,7 @@ spark-commerce/
 |---|---|
 | Users, products, categories, carts, orders, chat transcripts | MongoDB (owned by `server/`) |
 | Product images | Cloudinary (URL + publicId stored in Mongo) |
-| Product/policy embeddings | ChromaDB (`chatbot/data/chroma`), rebuildable from Mongo and `chatbot/knowledge/*.md` |
+| Product/policy embeddings and metadata | FAISS indexes and SQLite (`chatbot/data/faiss`), rebuildable from Mongo and `chatbot/knowledge/*.md` |
 | Agent thread state | SQLite file `chatbot/data/checkpoints.sqlite` |
 | Session/auth | httpOnly cookie holding a JWT (no localStorage tokens) |
 

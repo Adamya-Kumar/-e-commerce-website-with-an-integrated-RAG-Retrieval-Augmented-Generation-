@@ -41,7 +41,7 @@
 
 ## Data and storage rules
 - Mongo `_id` exposed to clients as `id`. Slugs for product URLs.
-- Chroma documents carry metadata: `type`, `product_id`, `slug`, `category`, `price_paise`, `in_stock`. Re-ingest on product change.
+- FAISS stores normalized vectors for cosine search; SQLite stores documents and metadata (`type`, `product_id`, `slug`, `category`, `price_paise`, `in_stock`). Re-ingest on product change.
 - Delete uploads from Cloudinary when a product image is removed.
 
 ## Testing
