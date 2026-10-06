@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     gemini_embed_model: str = Field(default="", alias="GEMINI_EMBED_MODEL")
     express_base_url: AnyUrl = Field(default="http://localhost:5000", alias="EXPRESS_BASE_URL")
     service_key: str = Field(default="", alias="SERVICE_KEY")
+    postgres_url: str = Field(default="postgresql://postgres:postgres@localhost:5432/spark_chatbot", alias="POSTGRES_URL")
     faiss_dir: str = Field(default="./data/faiss", alias="FAISS_DIR")
     checkpoint_db: str = Field(default="./data/checkpoints.sqlite3", alias="CHECKPOINT_DB")
 

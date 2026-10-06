@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-05 Express client and tools. In progress: the HTTP client that forwards user tokens, the tool layer for product/cart/order/policy actions, and the mocked-Express tests for success, 4xx, and timeout paths.
+- P2-06 LangGraph agent with confirmation interrupts. In progress: guardrails, the LangGraph state/confirm flow, and the PostgreSQL-backed checkpointer contract for thread persistence.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-05 Express client and tools. Implement the Express HTTP client, the tool modules for catalog/cart/orders/policy, and their mocked API tests before moving on to the LangGraph confirmation flow.
+- P2-06 LangGraph agent with confirmation interrupts. Implement the guardrails, agent-state routing, confirmation interrupt, and PostgreSQL checkpointer setup required before the stream chat API can be built.
 
 ## Next Up
 

@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 
+from app.agent.graph import initialize_agent_runtime
 from app.config import settings
 from app.rag.ingest import ingest_full, ingest_product, validate_service_key
 from app.rag.retrieval import answer_rag_question
@@ -13,6 +14,11 @@ app = FastAPI(
     version="0.1.0",
     description="Spark Commerce chatbot service scaffold.",
 )
+
+
+@app.on_event("startup")
+def startup_event() -> None:
+    initialize_agent_runtime()
 
 
 @app.get("/health")
