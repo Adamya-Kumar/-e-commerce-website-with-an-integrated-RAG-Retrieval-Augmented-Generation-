@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-03 Knowledge ingestion into FAISS + SQLite. In progress: product and policy indexes, SQLite document/metadata storage, the ingestion CLI/API, and the required knowledge markdown corpus for shipping, returns, COD, FAQ, and contact guidance.
+- P2-04 Retrieval and grounded answers. In progress: retrieval layer, query filter extraction, grounded response generation, and the `/chat/rag-test` endpoint and verification tests.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-03 Knowledge ingestion into FAISS + SQLite. Product indexing, policy chunking, and the service-key ingestion API are in progress. Verify the export-backed full ingest and the upsert/delete behavior before closing out this unit.
+- P2-04 Retrieval and grounded answers. Retrieval, filter extraction, and the grounded-answer endpoint are in progress. Verify the product filter behavior, honest not-found path, and policy-context answering before closing out this unit.
 
 ## Next Up
 

@@ -48,16 +48,26 @@ def _connect_database() -> sqlite3.Connection:
     return connection
 
 
-def get_collection_records(name: str) -> list[dict[str, Any]]:
+def get_collection_rows(name: str) -> list[dict[str, Any]]:
     with closing(_connect_database()) as connection:
         rows = connection.execute(
-            "SELECT id, document, metadata FROM documents WHERE collection = ? ORDER BY vector_id",
+            "SELECT vector_id, id, document, metadata FROM documents WHERE collection = ? ORDER BY vector_id",
             (name,),
         ).fetchall()
     return [
-        {"id": row["id"], "document": row["document"], "metadata": json.loads(row["metadata"])}
+        {
+            "vector_id": row["vector_id"],
+            "id": row["id"],
+            "document": row["document"],
+            "metadata": json.loads(row["metadata"]),
+        }
         for row in rows
     ]
+
+
+def get_collection_records(name: str) -> list[dict[str, Any]]:
+    rows = get_collection_rows(name)
+    return [{"id": row["id"], "document": row["document"], "metadata": row["metadata"]} for row in rows]
 
 
 def get_faiss_index(name: str) -> Any | None:
