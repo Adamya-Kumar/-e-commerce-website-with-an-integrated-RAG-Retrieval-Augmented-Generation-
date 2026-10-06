@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-06 LangGraph agent with confirmation interrupts. In progress: guardrails, the LangGraph state/confirm flow, and the PostgreSQL-backed checkpointer contract for thread persistence.
+- P2-07 Streaming chat API. In progress: the server-side SSE `/chat` flow, `/chat/confirm`, and persisted session/message retrieval for the chatbot-owned PostgreSQL-backed history.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-06 LangGraph agent with confirmation interrupts. Implement the guardrails, agent-state routing, confirmation interrupt, and PostgreSQL checkpointer setup required before the stream chat API can be built.
+- P2-07 Streaming chat API. Implement the SSE `/chat` route, `/chat/confirm`, per-thread locking, session persistence, and the latest-session retrieval contract defined in the spec.
 
 ## Next Up
 
