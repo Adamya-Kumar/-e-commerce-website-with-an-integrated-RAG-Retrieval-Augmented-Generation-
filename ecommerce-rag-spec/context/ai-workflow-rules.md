@@ -2,6 +2,7 @@
 
 ## Approach
 Spec-driven and incremental. The context files and the unit spec are the only source of requirements. Do not rely on assumptions.
+- Never replace a stack component named in `architecture.md` without asking the owner first.
 
 ## Scoping rules
 - Work on exactly one unit at a time, taken from `context/specs/00-build-plan.md`.

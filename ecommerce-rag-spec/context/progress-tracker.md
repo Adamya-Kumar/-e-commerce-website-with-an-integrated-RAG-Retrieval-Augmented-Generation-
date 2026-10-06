@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-04 Retrieval and grounded answers. In progress: retrieval layer, query filter extraction, grounded response generation, and the `/chat/rag-test` endpoint and verification tests.
+- P2-05 Express client and tools. In progress: the HTTP client that forwards user tokens, the tool layer for product/cart/order/policy actions, and the mocked-Express tests for success, 4xx, and timeout paths.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-04 Retrieval and grounded answers. Retrieval, filter extraction, and the grounded-answer endpoint are in progress. Verify the product filter behavior, honest not-found path, and policy-context answering before closing out this unit.
+- P2-05 Express client and tools. Implement the Express HTTP client, the tool modules for catalog/cart/orders/policy, and their mocked API tests before moving on to the LangGraph confirmation flow.
 
 ## Next Up
 
@@ -36,14 +36,13 @@ Update this file after every meaningful implementation change.
 - MongoDB Atlas Network Access currently allows `0.0.0.0/0`. Restrict this to trusted development/deployment egress IPs before production; this session did not change Atlas configuration.
 - P1-13 live admin CRUD/status verification needs an authenticated admin session.
 - Product/brand name (working title "Spark Commerce").
-- Agent checkpointer for production: SQLite file is fine for local; decide persistence before deploy (P2-11).
 - Hosting targets for client, server, chatbot.
 
 ## Architecture Decisions
 
 - Spark look is applied to the whole site (storefront + admin + chat), via Tailwind with Spark tokens as CSS variables.
 - JavaScript (no TypeScript); Vite + React; Express + Mongoose.
-- Chatbot is a separate Python service (FastAPI + LangGraph); FAISS CPU indexes with SQLite document/metadata storage; Gemini for chat + embeddings.
+- Chatbot is a separate Python service (FastAPI + LangGraph); FAISS CPU indexes with SQLite document/metadata storage; chatbot-owned PostgreSQL stores chat sessions, messages, and LangGraph checkpoints; Gemini for chat + embeddings.
 - Chatbot acts only through the Express API using the user's token; no direct DB access.
 - Confirmation interrupt required for place order, cancel, return, clear cart.
 - Payments: Cash on Delivery only in v1. Images: Cloudinary.
