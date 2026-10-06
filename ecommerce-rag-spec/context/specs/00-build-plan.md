@@ -27,7 +27,7 @@ Written before any code, so the whole system is designed up front. Update if a u
 |---|------|----------------|----------|------------|
 | P2-01 | Chatbot scaffold | FastAPI, config, Gemini check | chatbot | P1-14 |
 | P2-02 | Express internal API | service key, product export, ingest hook | server | P1-14 |
-| P2-03 | Knowledge ingestion | FAISS indexes, SQLite metadata, policy docs, ingest CLI/API | chatbot | P2-01, P2-02 |
+| P2-03 | Knowledge ingestion | Chroma collections, policy docs, ingest CLI/API | chatbot | P2-01, P2-02 |
 | P2-04 | Retrieval + grounded answers | filters, RAG answer, test endpoint | chatbot | P2-03 |
 | P2-05 | Express client + tools | all tools with tests | chatbot | P2-01 |
 | P2-06 | LangGraph agent | graph, guardrails, confirmation interrupts | chatbot | P2-04, P2-05 |
