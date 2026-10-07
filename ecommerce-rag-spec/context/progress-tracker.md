@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-07 Streaming chat API. In progress: the server-side SSE `/chat` flow, `/chat/confirm`, and persisted session/message retrieval for the chatbot-owned PostgreSQL-backed history.
+- P2-08 Express chat proxy and sessions. In progress: the browser-facing `/api/chat` proxy, verified JWT passthrough, service-key enforcement, and chat session retrieval through the chatbot-owned PostgreSQL-backed history.
 
 ## Completed
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change.
 
 ## In Progress
 
-- P2-07 Streaming chat API. Implement the SSE `/chat` route, `/chat/confirm`, per-thread locking, session persistence, and the latest-session retrieval contract defined in the spec.
+- P2-08 Express chat proxy and sessions. Implement the browser-facing `/api/chat` proxy, the `/api/chat/confirm` confirm flow, and the latest-session retrieval contract defined in the spec, while preserving the chatbot-owned database boundary.
 
 ## Next Up
 
