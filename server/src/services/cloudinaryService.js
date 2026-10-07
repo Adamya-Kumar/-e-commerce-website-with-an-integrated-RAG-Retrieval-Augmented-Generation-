@@ -6,6 +6,22 @@ export const PRODUCT_IMAGE_FOLDER = 'spark-commerce/products';
 
 let configured = false;
 
+function toUploadApiError(error) {
+  if (Number(error?.http_code) === 401) {
+    return new ApiError(
+      503,
+      'SERVICE_UNAVAILABLE',
+      'Cloudinary rejected the configured credentials. Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET on the server.',
+    );
+  }
+
+  return new ApiError(
+    502,
+    'UPLOAD_FAILED',
+    'Cloudinary could not upload this image. Check the server upload configuration and try again.',
+  );
+}
+
 function ensureCloudinary() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -39,7 +55,7 @@ export function uploadProductImage(buffer) {
       { folder: PRODUCT_IMAGE_FOLDER, resource_type: 'image' },
       (error, result) => {
         if (error || !result?.secure_url || !result.public_id) {
-          reject(error || new Error('Cloudinary upload failed'));
+          reject(toUploadApiError(error));
           return;
         }
         resolve({ url: result.secure_url, publicId: result.public_id });

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import pytest
-
-from app.agent.guardrails import guard_input
 from app.agent.graph import plan_next_action
+from app.agent.guardrails import guard_input
 
 
 def test_guard_input_rejects_prompt_injection() -> None:

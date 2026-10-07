@@ -210,7 +210,7 @@ Browser-facing chat endpoints in Express that authenticate the user and proxy to
 The Shopify-style floating bubble and side drawer inside the Spark design language, wired to `/api/chat`.
 
 ### Design
-Per `ui-context.md` (Chatbot): lime FAB bottom-right; 420px right drawer; forest-dark header; white bot bubbles, forest-medium user bubbles; lime-soft suggestion chips.
+Per `ui-context.md` (Chatbot): navbar Start chat action and lime FAB bottom-right share one chat state; 420px right drawer; desktop storefront reserves drawer space, while mobile uses a full-width overlay; forest-dark header; white bot bubbles, forest-medium user bubbles; lime-soft suggestion chips.
 
 ### Implementation
 - `src/components/chat/`: `ChatFab`, `ChatDrawer`, `MessageList`, `Composer`, `ProductCardMini`, `CartCard`, `OrderCard`, `ConfirmationCard`, `TypingDots`, `SuggestedPrompts`.

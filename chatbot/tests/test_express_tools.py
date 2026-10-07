@@ -5,8 +5,8 @@ import asyncio
 import pytest
 
 from app.clients.express import ExpressClient, ToolError
-from app.tools.catalog import get_product, search_products
 from app.tools.cart import add_to_cart, clear_cart, get_cart, list_addresses
+from app.tools.catalog import search_products
 from app.tools.orders import cancel_order, get_order, list_orders, place_order, request_return
 from app.tools.policy import get_policy
 
