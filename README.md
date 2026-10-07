@@ -38,6 +38,69 @@ npm run dev
 
 Both return `{ "data": { "status": "ok" } }`.
 
+## Chatbot
+
+The shopping assistant is a third service (`chatbot/`). The browser talks only to Express `POST /api/chat` (SSE). Express forwards `X-Service-Key` and, when the cookie JWT is valid, `X-User-Id`. Chat sessions live in PostgreSQL owned by the chatbot. Catalog vectors stay in FAISS + SQLite. Price, stock, and images shown in chat always come from `GET /api/products/:slug`, never from FAISS or the LLM.
+
+### Environment
+
+**`chatbot/.env`** (copy `chatbot/.env.example`):
+
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_API_KEY` | Gemini API key |
+| `GEMINI_CHAT_MODEL` | Chat/analysis/generate model id |
+| `GEMINI_EMBED_MODEL` | Embedding model id |
+| `GEMINI_RERANK_MODEL` | Optional rerank model; falls back to the chat model |
+| `EXPRESS_BASE_URL` | Express origin, e.g. `http://localhost:5000` |
+| `SERVICE_KEY` | Shared with Express |
+| `POSTGRES_URL` | Chat sessions and LangGraph checkpoints |
+| `RETRIEVE_K` | FAISS candidate count (default `20`) |
+| `RERANK_ENABLED` | Default `true` |
+| `RERANK_MIN_SCORE` | Default `0.4` |
+
+**`server/.env`:** `CHATBOT_URL=http://localhost:8000`, `SERVICE_KEY` (same value as the chatbot).
+
+**`client/.env`:** `VITE_CHATBOT_ENABLED=true` to render the chat FAB and drawer.
+
+### Run the three services locally
+
+PostgreSQL must be up with database `spark_chatbot`. Then three terminals:
+
+```powershell
+cd server
+npm install
+npm run dev
+```
+
+```powershell
+cd client
+copy .env.example .env
+npm install
+npm run dev
+```
+
+```powershell
+cd chatbot
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Ingest the catalog once (Express and Gemini must be available):
+
+```powershell
+cd chatbot
+python -m app.rag.ingest --full
+```
+
+### Manual test
+
+1. Open the storefront, click the chat button, and confirm the greeting uses your first name (or “Hi there!” when logged out).
+2. Ask: `best laptop under 60000 for coding`
+3. Follow up: `show cheaper ones`
+4. Ask: `what is your return policy`
+5. Ask for a product that does not exist and confirm the bot says it could not find a match.
+
 ### Optional local container setup
 
 A dev convenience stack is available at the repo root in `docker-compose.yml` for MongoDB, the API server, and the Vite client. It keeps the same env file pattern as the local setup and is intended for quick local bootstrapping rather than production deployment.

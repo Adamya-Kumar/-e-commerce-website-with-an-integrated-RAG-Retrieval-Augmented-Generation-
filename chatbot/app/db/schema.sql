@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY,
-    user_id UUID NULL,
+    user_id TEXT NULL,
     title TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_updated ON chat_sessions(user_id, updated_at DESC);

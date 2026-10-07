@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- P2-08 Express chat proxy and sessions. In progress: the browser-facing `/api/chat` proxy, verified JWT passthrough, service-key enforcement, and chat session retrieval through the chatbot-owned PostgreSQL-backed history.
+- Grounded RAG chat pipeline (analyze → retrieve → rerank → hydrate → generate) wired through LangGraph, Postgres sessions, Express SSE proxy, and the existing Spark chat UI.
 
 ## Completed
 
@@ -21,17 +21,17 @@ Update this file after every meaningful implementation change.
 - P1-07 Admin API and Cloudinary uploads. Every `/api/admin/*` route uses `requireAuth` and `requireRole('admin')`. Product and category CRUD (admin lists include inactive products). `POST /api/admin/uploads/image` uses multer memory storage, a 5 MB limit, and jpeg/png/webp only, then stores the file in Cloudinary folder `spark-commerce/products` and returns `{ url, publicId }`. Removing an image from a product, or deleting the product, deletes that Cloudinary asset. `PATCH /api/admin/orders/:id/status` allows one forward step (`placed → confirmed → packed → shipped → out_for_delivery → delivered`, and `return_requested → returned`) plus cancel from placed/confirmed/packed (stock restored). Skipping, moving backward, and any edit of `cancelled` or `returned` return 409. `GET /api/admin/stats` returns revenue excluding cancelled and returned, order count, new customers and revenue by day for the last 14 UTC days, orders by status, and active products with stock at or below 5. Product create, update, and delete call `onProductChanged(product)` (no-op; a thrown hook is logged and does not fail the request). Jest + Supertest: 25 passed. ESLint passes.
 - P1-08 Client shell and auth. Storefront and admin layouts, lazy routes, `ProtectedRoute` and `AdminRoute`, `AuthContext` (`login`, `register`, `logout`, `me`) on axios `withCredentials`, and login/register pages. Shop, cart, checkout, account, and admin screens are stubs. Sidebar collapse is stored in `localStorage`. ESLint and `npm run build` pass in `client/`.
 - P1-09 Storefront UI shell with placeholder data. Home has a forest-medium hero, lime badge, accent CTA, category chips, and a featured product grid. Listing has chips, a filter card (drawer below 992px), and rounded-xl product cards. Detail has a gallery, price block, quantity stepper, and an accent Add to cart. Prices are formatted from paise in the client. No catalog or cart API calls. ESLint and `npm run build` pass in `client/`.
+- Grounded RAG chat pipeline. Gemini query analysis (pydantic intent/filters/standalone_query), FAISS retrieve, Gemini rerank, Express hydrate for live price/stock/image, grounded generate. LangGraph graph with Postgres checkpointer. `POST /chat` SSE (`token`, `ui_card`, `done`, `error`, `cancelling`). Express proxies `/api/chat` at 20 messages/min. Client greeting from AuthContext; chat UI behind `VITE_CHATBOT_ENABLED`. Cart/order bot actions deferred.
 
 ## In Progress
 
-- P2-08 Express chat proxy and sessions. Implement the browser-facing `/api/chat` proxy, the `/api/chat/confirm` confirm flow, and the latest-session retrieval contract defined in the spec, while preserving the chatbot-owned database boundary.
+- Grounded RAG workflow verification against live Gemini, FAISS ingest of the seed catalog, and PostgreSQL.
 
 ## Next Up
 
-- P1-13 authenticated workflow verification and close-out (`context/specs/phase-1-website.md`).
+- P2-10 evaluation and safety golden set once live retrieval quality is confirmed.
 
 ## Open Questions
-
 - P1-10 through P1-12 have no completion/verification entry in this tracker. They remain unverified and are outside this session's requested P1-13 scope.
 - MongoDB Atlas Network Access currently allows `0.0.0.0/0`. Restrict this to trusted development/deployment egress IPs before production; this session did not change Atlas configuration.
 - P1-13 live admin CRUD/status verification needs an authenticated admin session.
@@ -51,6 +51,9 @@ Update this file after every meaningful implementation change.
 
 ## Session Notes
 
+- RAG workflow: query analysis is a pydantic-validated Gemini JSON step (intent, standalone_query, filters in paise, needs_retrieval). FAISS retrieves `RETRIEVE_K` hits, Gemini reranks to the top 5 at or above `RERANK_MIN_SCORE` (skipped at 3 or fewer hits; FAISS order on failure). Live price/stock/image come from `GET /api/products/:slug`. Cart and order intents return a fixed deferred message. Chat sessions and LangGraph checkpoints use PostgreSQL (`user_id` text). Greeting is client-side from AuthContext. Chat UI renders only when `VITE_CHATBOT_ENABLED=true`.
+- Cloudinary upload error follow-up: provider 401s now return a sanitized 503 that names the server env variables to verify; other upload failures return a sanitized 502. Server lint and the focused admin tests pass (6 tests). The configured Cloudinary credentials still need to be corrected in `server/.env` and the server restarted; secret values were not inspected or changed.
+- P2-09 UI update: navbar Start/Close chat toggles the shared assistant state; desktop reserves 420px for the drawer and mobile uses a full-width modal overlay. Empty product placeholders no longer render as fake products, and real product cards accept paise/stock fields. Client lint/build pass. Browser checked at 1440px and 390px; drawer open/close and responsive geometry verified. The active chatbot endpoint's hardcoded zero-count result remains tracked as a separate P2-07 follow-up.
 - P2-03 vector backend uses FAISS CPU for normalized cosine-search indexes and SQLite for persisted documents and metadata. The chatbot test suite passes (5 tests), Ruff passes, and `requirements.txt` resolves. Full export ingest still requires the Express endpoint and Gemini credentials.
 - P1-13 implemented: live admin dashboard stats, revenue and order-status charts, low-stock table, product search/pagination/create/edit/image upload/activation/delete, category CRUD/activation, and filtered/paginated order management with detail modal and legal next-status transitions. Client lint and production build pass. The API health proxy returns HTTP 200. Authenticated CRUD/status workflows still need verification before P1-13 can be marked complete.
 - Customer account follow-up: order data now refetches on window focus, load failures have a retry state, and timeline/date rendering tolerates incomplete legacy data. Client lint and production build pass; the reported crash was not reproduced with an authenticated customer session.

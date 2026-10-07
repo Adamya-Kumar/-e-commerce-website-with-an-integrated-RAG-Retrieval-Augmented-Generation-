@@ -71,7 +71,14 @@ class ExpressClient:
             return {"status": "ok"}
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
-        return asyncio.run(self._request(method, path, **kwargs))
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._request(method, path, **kwargs))
+        raise RuntimeError("Use arequest() from async code.")
+
+    async def arequest(self, method: str, path: str, **kwargs: Any) -> Any:
+        return await self._request(method, path, **kwargs)
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         headers = dict(kwargs.pop("headers", {}) or {})
@@ -103,6 +110,12 @@ class ExpressClient:
 
     def delete(self, path: str, **kwargs: Any) -> Any:
         return self.request("DELETE", path, **kwargs)
+
+    async def aget(self, path: str, **kwargs: Any) -> Any:
+        return await self.arequest("GET", path, **kwargs)
+
+    async def apost(self, path: str, **kwargs: Any) -> Any:
+        return await self.arequest("POST", path, **kwargs)
 
 
 __all__ = ["ExpressClient", "ToolError"]

@@ -7,7 +7,7 @@ import { cn } from '../ui/cn.js';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-export default function StorefrontNavbar() {
+export default function StorefrontNavbar({ chatOpen, onToggleChat, chatEnabled = true }) {
   const { user, logout } = useAuth();
   const { count } = useCart();
   const navigate = useNavigate();
@@ -108,6 +108,19 @@ export default function StorefrontNavbar() {
             <i className="bi bi-search" />
           </button>
         </form>
+
+        {chatEnabled ? (
+          <button
+            type="button"
+            aria-label={chatOpen ? 'Close shopping assistant' : 'Start chat'}
+            aria-expanded={chatOpen}
+            onClick={onToggleChat}
+            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-full border border-light bg-card px-3 text-sm font-semibold text-main shadow-spark-sm transition duration-200 ease-in-out hover:text-forest-medium"
+          >
+            <i className={chatOpen ? 'bi bi-x-lg' : 'bi bi-chat-dots'} />
+            <span className="hidden md:inline">{chatOpen ? 'Close chat' : 'Start chat'}</span>
+          </button>
+        ) : null}
 
         <Link
           to="/cart"

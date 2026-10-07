@@ -9,21 +9,19 @@ import { readAuthToken } from '../utils/authToken.js';
 const chatRouter = Router();
 const CHAT_RATE_WINDOW_MS = 60_000;
 const CHAT_RATE_LIMIT = Number(process.env.CHAT_RATE_LIMIT ?? 20);
-const CHAT_GUEST_RATE_LIMIT = Number(process.env.CHAT_GUEST_RATE_LIMIT ?? 5);
 const CHAT_DAILY_LIMIT = Number(process.env.CHAT_DAILY_LIMIT ?? 500);
 const chatMinuteBuckets = new Map();
 const chatDayBuckets = new Map();
 
 chatRouter.use(asyncHandler(async (req, _res, next) => {
-  const userId = resolveChatUserId(req);
-  req.chatUserId = userId;
-  enforceChatRateLimit(req, userId);
+  req.chatUserId = resolveChatUserId(req);
   next();
 }));
 
 chatRouter.post(
   '/',
   asyncHandler(async (req, res) => {
+    enforceChatRateLimit(req, req.chatUserId);
     const payload = req.body ?? {};
     await proxyChatbot(req, res, '/chat', payload);
   }),
@@ -40,6 +38,9 @@ chatRouter.post(
 chatRouter.get(
   '/sessions/latest',
   asyncHandler(async (req, res) => {
+    if (!req.chatUserId) {
+      throw ApiError.unauthorized('Login required to load chat history');
+    }
     await proxyChatbot(req, res, '/chat/sessions/latest');
   }),
 );
@@ -74,7 +75,7 @@ function getClientIp(req) {
 
 function enforceChatRateLimit(req, userId) {
   const key = userId ? `user:${userId}` : `ip:${getClientIp(req)}`;
-  const limit = userId ? CHAT_RATE_LIMIT : CHAT_GUEST_RATE_LIMIT;
+  const limit = CHAT_RATE_LIMIT;
   const now = Date.now();
   const minuteBucket = chatMinuteBuckets.get(key) ?? {
     count: 0,

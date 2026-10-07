@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.config import settings
+from app.db.sessions import IN_MEMORY_CHAT_SESSIONS
 from app.main import app
 
 client = TestClient(app)
@@ -15,6 +16,9 @@ def test_health_route_returns_ok() -> None:
 
 def test_chat_stream_emits_sse_events(monkeypatch) -> None:
     monkeypatch.setattr(settings, "service_key", "test-secret", raising=False)
+    monkeypatch.setattr("app.rag.analyze.fetch_categories", lambda **_k: ["laptops"])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_products", lambda *_a, **_k: [])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_policies", lambda *_a, **_k: [])
 
     with TestClient(app) as test_client:
         response = test_client.post(
@@ -36,6 +40,10 @@ def test_chat_stream_emits_sse_events(monkeypatch) -> None:
 
 def test_latest_chat_session_returns_user_messages(monkeypatch) -> None:
     monkeypatch.setattr(settings, "service_key", "test-secret", raising=False)
+    monkeypatch.setattr("app.rag.analyze.fetch_categories", lambda **_k: ["laptops"])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_products", lambda *_a, **_k: [])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_policies", lambda *_a, **_k: [])
+    IN_MEMORY_CHAT_SESSIONS.clear()
 
     with TestClient(app) as test_client:
         post_response = test_client.post(
@@ -48,6 +56,7 @@ def test_latest_chat_session_returns_user_messages(monkeypatch) -> None:
             headers={"X-Service-Key": "test-secret", "X-User-Id": "user-456"},
         )
         assert post_response.status_code == 200
+        "".join(post_response.iter_text())
 
         latest_response = test_client.get(
             "/chat/sessions/latest",
