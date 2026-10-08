@@ -33,7 +33,8 @@
 
 ## chatbot/ (FastAPI + LangGraph)
 - Folders: `app/main.py`, `app/config.py`, `app/api/` (routes, SSE), `app/agent/` (graph, state, prompts, guardrails), `app/tools/` (one file per tool group), `app/rag/` (ingest, retrieve, chunking), `app/clients/` (express client), `tests/`, `knowledge/` (policy/FAQ markdown), `eval/`.
-- Config only via `pydantic-settings` from env. Model IDs come from env (`GEMINI_CHAT_MODEL`, `GEMINI_EMBED_MODEL`); never hardcode them.
+- Config only via `pydantic-settings` from env. Groq (`GROQ_CHAT_MODEL`) is the primary chat model. Gemini (`GEMINI_CHAT_MODEL`) is the fallback. Embeddings stay on `GEMINI_EMBED_MODEL`. Never hardcode model ids.
+- PostgreSQL connection configuration comes from `POSTGRES_URL`. Keep the chatbot-owned SQL schema in `app/db/schema.sql`; use SQL directly and do not add an ORM.
 - Each tool: pydantic input schema, short docstring written for the LLM, returns compact JSON (ids, names, prices, stock), never raw HTML or long text.
 - Tools call the Express API only through `app/clients/express.py` (httpx, timeouts, user token forwarded).
 - Prompts live in `app/agent/prompts.py` as constants; no prompt strings scattered in code.
@@ -41,7 +42,8 @@
 
 ## Data and storage rules
 - Mongo `_id` exposed to clients as `id`. Slugs for product URLs.
-- Chroma documents carry metadata: `type`, `product_id`, `slug`, `category`, `price_paise`, `in_stock`. Re-ingest on product change.
+- FAISS stores normalized vectors for cosine search; SQLite stores documents and metadata (`type`, `product_id`, `slug`, `category`, `price_paise`, `in_stock`). Re-ingest on product change.
+- PostgreSQL stores chatbot-owned chat sessions, messages, and LangGraph checkpoints. Do not store chat sessions in MongoDB.
 - Delete uploads from Cloudinary when a product image is removed.
 
 ## Testing

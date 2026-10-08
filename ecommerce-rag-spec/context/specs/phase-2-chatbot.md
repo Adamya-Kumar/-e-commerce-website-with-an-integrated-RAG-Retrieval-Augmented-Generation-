@@ -1,4 +1,4 @@
-# Phase 2 Spec: RAG + Agentic Chatbot (FastAPI + LangGraph + ChromaDB + Gemini)
+# Phase 2 Spec: RAG + Agentic Chatbot (FastAPI + LangGraph + FAISS + PostgreSQL + Gemini)
 
 Goal: a shopping assistant inside the Phase 1 site that answers product questions from the catalog (RAG), recommends products, and acts for the logged-in user (cart, orders, tracking, cancel, return) through the existing Express API.
 
@@ -43,7 +43,7 @@ State: `messages`, `user` (id, role, token present?), `page_context`, `pending_a
 
 | Tool | Express call | Confirmation |
 |---|---|---|
-| `search_products(query, category?, min_price?, max_price?, in_stock?)` | vector search in Chroma, then hydrate live data from `GET /api/products` by slug | no |
+| `search_products(query, category?, min_price?, max_price?, in_stock?)` | vector search in FAISS, filter metadata in SQLite, then hydrate live data from `GET /api/products` by slug | no |
 | `get_product(slug)` | `GET /api/products/:slug` | no |
 | `get_policy(topic)` | retrieval over policy collection | no |
 | `get_cart()` | `GET /api/cart` | no |
@@ -71,7 +71,7 @@ Events: `token` (text delta), `tool_start` (name), `ui_card` (typed payload: `pr
 FastAPI service with config, health route, Gemini connectivity check, test setup. No agent yet.
 
 ### Implementation
-- `chatbot/` with `pyproject.toml` (or `requirements.txt`), `app/main.py`, `app/config.py` (pydantic-settings), `GET /health`, `.env.example` (GOOGLE_API_KEY, GEMINI_CHAT_MODEL, GEMINI_EMBED_MODEL, EXPRESS_BASE_URL, SERVICE_KEY, CHROMA_DIR, CHECKPOINT_DB).
+- `chatbot/` with `pyproject.toml` (or `requirements.txt`), `app/main.py`, `app/config.py` (pydantic-settings), `GET /health`, `.env.example` (GOOGLE_API_KEY, GEMINI_CHAT_MODEL, GEMINI_EMBED_MODEL, EXPRESS_BASE_URL, SERVICE_KEY, FAISS_DIR, POSTGRES_URL).
 - A script `scripts/check_gemini.py` that sends one chat and one embedding request. Verify current model IDs in Google AI Studio docs before filling env.
 - ruff + pytest configured.
 
@@ -99,20 +99,20 @@ Add service-key protected endpoints in `server/` that the chatbot needs. No chat
 - [ ] Product update triggers the hook; hook failure does not fail the admin request
 - [ ] Browser CORS cannot reach `/api/internal/*` (not in CORS allow-list usage; key required)
 
-## P2-03 Knowledge ingestion into ChromaDB
+## P2-03 Knowledge ingestion into FAISS
 
 ### Goal
-Index products and policy/FAQ content into two Chroma collections.
+Index products and policy/FAQ content into FAISS indexes, with documents and metadata in SQLite. FAISS files and SQLite retrieval metadata are chatbot-owned; this unit does not store chat sessions or agent checkpoints.
 
 ### Implementation
-- Collections: `products` (one document per product: title, brand, category, description, tags, attributes rendered as text) and `policies` (chunks of `chatbot/knowledge/*.md`: shipping, returns/cancellation, COD, FAQ, contact). Write these markdown files in this unit with content consistent with the Phase 1 rules (free shipping above 999 INR, fee 49 INR, cancel until shipped, return within 7 days of delivery, COD only).
+- Build FAISS CPU indexes for `products` (one document per product: title, brand, category, description, tags, attributes rendered as text) and `policies` (chunks of `chatbot/knowledge/*.md`: shipping, returns/cancellation, COD, FAQ, contact). Store normalized vectors in persistent FAISS index files and keep document text and metadata in SQLite. Write these markdown files in this unit with content consistent with the Phase 1 rules (free shipping above 999 INR, fee 49 INR, cancel until shipped, return within 7 days of delivery, COD only). Do not use ChromaDB.
 - Metadata per product doc: `type, product_id, slug, category, brand, price_paise, in_stock`.
 - Embeddings via Gemini embedding model; chunk policies at about 500 tokens with overlap.
 - CLI: `python -m app.rag.ingest --full` (pulls the export endpoint, upserts, deletes stale IDs). API: `POST /ingest/product` (upsert/delete one, service key), `POST /ingest/full`.
 
 ### Verify when done
 - [ ] Full ingest of the seed catalog completes; collection counts match the DB
-- [ ] Updating a product in admin updates its Chroma document within seconds
+- [ ] Updating a product in admin updates its FAISS vector and SQLite document within seconds
 - [ ] Re-running ingest is idempotent
 
 ## P2-04 Retrieval and grounded answers
@@ -156,26 +156,28 @@ The full agent graph (as drawn above) with guardrails, running from a Python tes
 - System prompt in `prompts.py` encoding the behavior contract; tool list depends on `is_guest`.
 - `guard_input`: length limit, basic prompt-injection patterns, off-topic refusal (stay on shopping/store help).
 - Confirm node: LangGraph `interrupt` before executing `place_order`, `cancel_order`, `request_return`, `clear_cart`; the confirmation summary is built from live data (`get_cart`, `get_order`), not from LLM text.
-- SQLite checkpointer; `thread_id` per chat session; trimming to the last N messages to control tokens.
+- Use `langgraph-checkpoint-postgres` for the checkpointer, with `thread_id` per chat session; call the checkpointer's `setup()` during chatbot startup. PostgreSQL is owned by the chatbot service. Trim graph context to the last N messages to control tokens.
+- Define chatbot-owned `chat_sessions` and `chat_messages` tables in `chatbot/app/db/schema.sql`. `chat_sessions` has `id uuid`, nullable `user_id`, `title`, `created_at`, and `updated_at`. `chat_messages` has `id`, `session_id`, `role`, `content`, `ui_cards jsonb`, and `created_at`.
 - `page_context` (current product slug, cart count, page type) injected as a system message each turn for page-aware help.
 - Max tool-loop iterations (6) to prevent runaway.
 
 ### Dependencies
-langgraph, langgraph-checkpoint-sqlite, langchain-chroma, chromadb.
+langgraph, langgraph-checkpoint-postgres, faiss-cpu, numpy.
 
 ### Verify when done
 - [ ] Test: "add the first one" after a product list adds the right item
-- [ ] Test: `place_order` never executes without approval; decline path works; interrupt survives process restart (checkpointer)
+- [ ] Test: `place_order` never executes without approval; decline path works; a pending interrupt survives a chatbot restart using the PostgreSQL checkpointer
 - [ ] Test: guest cannot reach cart/order tools
 - [ ] Test: injected instruction inside a product description does not change behavior
 
 ## P2-07 Streaming chat API
 
 ### Goal
-`POST /chat` (SSE) and `POST /chat/confirm` exposing the agent with the streaming protocol.
+`POST /chat` (SSE), `POST /chat/confirm`, and `GET /chat/sessions/latest` exposing the agent, persisted chat history, and streaming protocol.
 
 ### Implementation
-- Request: `{ thread_id, message, page_context }`; headers: `X-Service-Key`, `Authorization` (optional for guests).
+- Request: `{ thread_id, message, page_context }`; headers: `X-Service-Key` and `X-User-Id` (optional for guests; trusted only when the service key is valid).
+- Persist sessions and messages in the chatbot-owned PostgreSQL database using the schema in `app/db/schema.sql`. Store message UI cards in `ui_cards` as JSONB. `GET /chat/sessions/latest` returns the authenticated user's latest session and messages; guests do not receive another user's data.
 - Emit `token`, `tool_start`, `ui_card`, `confirmation_request`, `done`, `error`.
 - Timeouts, cancellation on client disconnect, per-thread lock to avoid concurrent runs.
 - OpenAPI docs describe events.
@@ -183,21 +185,23 @@ langgraph, langgraph-checkpoint-sqlite, langchain-chroma, chromadb.
 ### Verify when done
 - [ ] `curl -N` shows streamed tokens and a `done` event
 - [ ] A purchase flow via curl stops at `confirmation_request` and resumes after `/chat/confirm`
+- [ ] `GET /chat/sessions/latest` returns the user's latest session and persisted messages
 - [ ] Disconnecting the client cancels the run
 
 ## P2-08 Express chat proxy and sessions (server/ boundary)
 
 ### Goal
-Browser-facing chat endpoints in Express that authenticate the user and proxy to the chatbot, plus chat session persistence.
+Browser-facing chat endpoints in Express that authenticate the user and proxy to the chatbot. Chat persistence is owned by the chatbot service.
 
 ### Implementation
-- `POST /api/chat`, `POST /api/chat/confirm`: read the cookie JWT (optional), add `X-Service-Key` and forward the user token, pipe the SSE stream through unchanged; rate limit (for example 20 messages/min/user, stricter for guests by IP).
-- `ChatSession` model: create on first message, store transcript (role, content, timestamp), `GET /api/chat/sessions/latest` to restore the drawer after refresh.
+- `POST /api/chat`, `POST /api/chat/confirm`, `GET /api/chat/sessions/latest`: verify the cookie JWT when present, then proxy to the chatbot with `X-Service-Key` and `X-User-Id` derived from the verified JWT (omit the user ID for guests). Pipe SSE unchanged; rate limit (for example 20 messages/min/user, stricter for guests by IP).
+- Do not create a Mongo `ChatSession` model or persist chat transcripts in Express. The chatbot owns session and message persistence. The chatbot must reject or ignore `X-User-Id` unless `X-Service-Key` is valid.
 - Daily message cap per user (env) for cost control.
 
 ### Verify when done
 - [ ] Streaming works through the proxy without buffering
 - [ ] Guest and logged-in calls behave per the contract; rate limits return 429
+- [ ] Proxy derives `X-User-Id` only from a verified JWT; chatbot does not trust the header without a valid service key
 - [ ] Transcript restores after refresh
 
 ## P2-09 Chat UI: bubble and side drawer
@@ -206,7 +210,7 @@ Browser-facing chat endpoints in Express that authenticate the user and proxy to
 The Shopify-style floating bubble and side drawer inside the Spark design language, wired to `/api/chat`.
 
 ### Design
-Per `ui-context.md` (Chatbot): lime FAB bottom-right; 420px right drawer; forest-dark header; white bot bubbles, forest-medium user bubbles; lime-soft suggestion chips.
+Per `ui-context.md` (Chatbot): navbar Start chat action and lime FAB bottom-right share one chat state; 420px right drawer; desktop storefront reserves drawer space, while mobile uses a full-width overlay; forest-dark header; white bot bubbles, forest-medium user bubbles; lime-soft suggestion chips.
 
 ### Implementation
 - `src/components/chat/`: `ChatFab`, `ChatDrawer`, `MessageList`, `Composer`, `ProductCardMini`, `CartCard`, `OrderCard`, `ConfirmationCard`, `TypingDots`, `SuggestedPrompts`.
@@ -242,15 +246,16 @@ A repeatable evaluation of retrieval, tool use, and safety.
 Run all three services together and prepare for hosting.
 
 ### Implementation
-- `docker-compose.yml`: mongo, server, client, chatbot (with persistent volumes for Chroma and the checkpoint DB).
-- Env documentation for all services; decide persistence for the checkpointer and Chroma in hosting (open question in tracker).
+- `docker-compose.yml`: mongo, postgres, server, client, chatbot; configure persistent volumes for PostgreSQL and FAISS index files. SQLite retrieval metadata remains alongside its FAISS data.
+- Env documentation for all services, including chatbot `POSTGRES_URL`; document persistence and backup/restore procedures for PostgreSQL and FAISS files.
 - Cost and abuse controls: per-user daily cap, max message length, max tokens, timeouts.
 - Structured logs with thread id; basic metrics (latency, tool error rate).
 - Final demo script and README section "Chatbot".
 
 ### Verify when done
 - [ ] `docker compose up` runs the whole system; demo passes end to end
-- [ ] Killing and restarting the chatbot container keeps threads and the index
+- [ ] Killing and restarting the chatbot container keeps sessions, messages, checkpoints, and FAISS indexes
+- [ ] PostgreSQL and FAISS data have documented backups, and a restore is verified
 - [ ] README explains setup, env, ingestion, and evaluation
 
 ## Phase 2 exit criteria

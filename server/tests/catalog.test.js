@@ -100,6 +100,19 @@ describe('catalog API', () => {
         (product) => product.category.slug === 'laptops',
       ),
     ).toBe(true);
+
+    const conversational = await request(app).get('/api/products').query({
+      q: 'suggest some laptops',
+      sort: 'relevance',
+      limit: 60,
+    });
+    expect(conversational.status).toBe(200);
+    expect(conversational.body.meta.total).toBe(10);
+    expect(
+      conversational.body.data.every(
+        (product) => product.category.slug === 'laptops',
+      ),
+    ).toBe(true);
   });
 
   it('returns the 404 envelope for an unknown or inactive slug', async () => {
@@ -171,6 +184,30 @@ describe('catalog API', () => {
     expect(unknownCategory.status).toBe(200);
     expect(unknownCategory.body.data).toEqual([]);
     expect(unknownCategory.body.meta.total).toBe(0);
+  });
+
+  it('finds products regardless of search letter case', async () => {
+    const fashion = await Category.findOne({ slug: 'womens-fashion' });
+    await Product.create({
+      title: 'LV Bag',
+      description: 'Structured tote for daily use.',
+      category: fashion._id,
+      brand: 'lv',
+      price: 100000,
+      stock: 4,
+      tags: ['Bag'],
+      isActive: true,
+      images: [{ url: 'https://placehold.co/800x800/png?text=LV' }],
+    });
+
+    const lower = await request(app).get('/api/products').query({ q: 'lv bag' });
+    const mixed = await request(app).get('/api/products').query({ q: 'Lv Bag' });
+    const upper = await request(app).get('/api/products').query({ q: 'LV BAG' });
+
+    expect(lower.status).toBe(200);
+    expect(lower.body.data.some((product) => product.slug === 'lv-bag')).toBe(true);
+    expect(mixed.body.data.some((product) => product.slug === 'lv-bag')).toBe(true);
+    expect(upper.body.data.some((product) => product.slug === 'lv-bag')).toBe(true);
   });
 
   it('rejects an invalid sort value', async () => {

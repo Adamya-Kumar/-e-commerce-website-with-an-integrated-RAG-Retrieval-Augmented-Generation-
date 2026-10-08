@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandMark from '../brand/BrandMark.jsx';
 
 const columns = [
   {
@@ -25,7 +26,7 @@ export default function StorefrontFooter() {
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 sm:grid-cols-3">
         <div>
           <p className="flex items-center gap-2 text-lg font-bold text-white">
-            <i className="bi bi-asterisk text-lime" />
+            <BrandMark className="h-7 w-7" />
             Spark Commerce
           </p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed">

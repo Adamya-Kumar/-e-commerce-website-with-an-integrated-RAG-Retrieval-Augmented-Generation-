@@ -4,46 +4,45 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Phase 1: Website
+- Phase 2: RAG + Agentic Chatbot
 
 ## Current Goal
 
-- P1-13 Admin UI. In progress: dashboard stats/charts, product and category management, and admin order management. Also fixing the customer account order refresh/render issue reported during admin status transitions.
+- Grounded RAG chat pipeline (analyze → retrieve → rerank → hydrate → generate) wired through LangGraph, Postgres sessions, Express SSE proxy, and the existing Spark chat UI.
 
 ## Completed
 
 - P1-01 Monorepo scaffold and health checks. Vite client and Express server start. `GET /api/health` returns `{ data: { status: 'ok' } }` on port 5000 and through the Vite proxy. ESLint passes in both apps. `npm run build` passes in `client/`.
 - P1-02 Spark tokens and UI kit. CSS variables in `client/src/styles/tokens.css`, Tailwind maps them, Plus Jakarta Sans and Bootstrap Icons load, and `/dev/ui` renders the base kit (buttons, forms, badges, table, modal, drawer, dropdown, toast, pagination, skeleton, empty state, spinner). No API calls. ESLint and `npm run build` pass. No hex colors in `client/src/components`.
-- P1-03 Server foundation and models. Server connects to MongoDB database `spark-commerce`, logs listen with pino, and unknown routes return `{ error: { code: 'NOT_FOUND', message } }`. Zod `validate` returns 422 `{ error: { code: 'VALIDATION_ERROR', details } }`. Models: User, Category, Product, Cart, Order. Indexes: unique email, unique slugs, Product text index (`title`, `description`, `tags`, `brand`), unique cart user, order user. ESLint passes. ChatSession stays in P2-08.
+- P1-03 Server foundation and models. Server connects to MongoDB database `spark-commerce`, logs listen with pino, and unknown routes return `{ error: { code: 'NOT_FOUND', message } }`. Zod `validate` returns 422 `{ error: { code: 'VALIDATION_ERROR', details } }`. Models: User, Category, Product, Cart, Order. Indexes: unique email, unique slugs, Product text index (`title`, `description`, `tags`, `brand`), unique cart user, order user. ESLint passes. Chat persistence is chatbot-owned and specified in P2-07.
 - P1-04 Auth API. `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me`. JWT (7d) is an httpOnly `token` cookie (`SameSite=Lax`, `Secure` in production). `requireAuth` also accepts `Authorization: Bearer`. Public register always creates `customer`. `requireRole` guards `GET /api/admin/ping` until P1-07. Login and register are rate limited (10 per 15 minutes per IP; skipped when `NODE_ENV=test`). `npm run seed:admin` upserts an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Responses omit `passwordHash`. Jest + Supertest: 8 passed. ESLint passes.
 - P1-05 Catalog API and seed data. `GET /api/categories`, `GET /api/products` (`q`, `category`, `brand`, `minPrice`, `maxPrice`, `inStock`, `sort`, `page`, `limit`), and `GET /api/products/:slug`. Public lists return only `isActive` records. Search uses the product text index. Sort values: `relevance`, `price_asc`, `price_desc`, `newest`. List responses include `meta` (`page`, `limit`, `total`, `totalPages`). `npm run seed:catalog` upserts 6 categories and 60 products by slug (placeholder image URLs). Jest + Supertest: 13 passed. ESLint passes.
 - P1-06 Cart and Order API (COD). Authenticated `GET/POST /api/addresses`, `PUT/DELETE /api/addresses/:id` (embedded on User; one default). Cart: `GET /api/cart`, `POST /api/cart/items`, `PATCH/DELETE /api/cart/items/:productId`, `DELETE /api/cart`. Quantities below 1 are 422; quantities above stock are 409. Cart GET uses live catalog prices after `discountPercent`, plus line totals, subtotal, shipping fee, and total. `POST /api/orders` accepts `{ addressId }` only, snapshots the cart, decrements stock with `findOneAndUpdate` (`stock >= qty`), restores stock and the cart on failure (409 with the offending product), clears the cart on success, and sets status `placed` with a timeline entry. Cancel is owner-only in placed/confirmed/packed and restores stock. Return is owner-only within 7 days of `delivered`. Another customer's order reads as 404. Jest + Supertest: 19 passed. ESLint passes.
 - P1-07 Admin API and Cloudinary uploads. Every `/api/admin/*` route uses `requireAuth` and `requireRole('admin')`. Product and category CRUD (admin lists include inactive products). `POST /api/admin/uploads/image` uses multer memory storage, a 5 MB limit, and jpeg/png/webp only, then stores the file in Cloudinary folder `spark-commerce/products` and returns `{ url, publicId }`. Removing an image from a product, or deleting the product, deletes that Cloudinary asset. `PATCH /api/admin/orders/:id/status` allows one forward step (`placed → confirmed → packed → shipped → out_for_delivery → delivered`, and `return_requested → returned`) plus cancel from placed/confirmed/packed (stock restored). Skipping, moving backward, and any edit of `cancelled` or `returned` return 409. `GET /api/admin/stats` returns revenue excluding cancelled and returned, order count, new customers and revenue by day for the last 14 UTC days, orders by status, and active products with stock at or below 5. Product create, update, and delete call `onProductChanged(product)` (no-op; a thrown hook is logged and does not fail the request). Jest + Supertest: 25 passed. ESLint passes.
 - P1-08 Client shell and auth. Storefront and admin layouts, lazy routes, `ProtectedRoute` and `AdminRoute`, `AuthContext` (`login`, `register`, `logout`, `me`) on axios `withCredentials`, and login/register pages. Shop, cart, checkout, account, and admin screens are stubs. Sidebar collapse is stored in `localStorage`. ESLint and `npm run build` pass in `client/`.
 - P1-09 Storefront UI shell with placeholder data. Home has a forest-medium hero, lime badge, accent CTA, category chips, and a featured product grid. Listing has chips, a filter card (drawer below 992px), and rounded-xl product cards. Detail has a gallery, price block, quantity stepper, and an accent Add to cart. Prices are formatted from paise in the client. No catalog or cart API calls. ESLint and `npm run build` pass in `client/`.
+- Grounded RAG chat pipeline. Groq chat/analysis/rerank, Gemini embeddings, FAISS retrieve, Express hydrate for live price/stock/image, grounded generate. LangGraph graph with Postgres checkpointer. `POST /chat` SSE (`token`, `ui_card`, `done`, `error`, `cancelling`). Express proxies `/api/chat` at 20 messages/min. Admin shop assistant is `POST /api/admin/chat` and uses a live stats/orders snapshot. Client greeting from AuthContext; chat UI behind `VITE_CHATBOT_ENABLED`. Cart/order bot actions deferred. The transcript scrolls to the latest message.
 
 ## In Progress
 
-- P1-13 Admin UI. Dashboard, products, categories, and orders screens are implemented. Complete authenticated CRUD and status-transition verification before marking this unit complete.
+- Grounded RAG workflow verification against live Gemini, FAISS ingest of the seed catalog, and PostgreSQL.
 
 ## Next Up
 
-- P1-13 authenticated workflow verification and close-out (`context/specs/phase-1-website.md`).
+- P2-10 evaluation and safety golden set once live retrieval quality is confirmed.
 
 ## Open Questions
-
 - P1-10 through P1-12 have no completion/verification entry in this tracker. They remain unverified and are outside this session's requested P1-13 scope.
 - MongoDB Atlas Network Access currently allows `0.0.0.0/0`. Restrict this to trusted development/deployment egress IPs before production; this session did not change Atlas configuration.
 - P1-13 live admin CRUD/status verification needs an authenticated admin session.
 - Product/brand name (working title "Spark Commerce").
-- Agent checkpointer for production: SQLite file is fine for local; decide persistence before deploy (P2-11).
 - Hosting targets for client, server, chatbot.
 
 ## Architecture Decisions
 
 - Spark look is applied to the whole site (storefront + admin + chat), via Tailwind with Spark tokens as CSS variables.
 - JavaScript (no TypeScript); Vite + React; Express + Mongoose.
-- Chatbot is a separate Python service (FastAPI + LangGraph); Chroma for retrieval; Gemini for chat + embeddings.
+- Chatbot is a separate Python service (FastAPI + LangGraph); FAISS CPU indexes with SQLite document/metadata storage; chatbot-owned PostgreSQL stores chat sessions, messages, and LangGraph checkpoints; Gemini for chat + embeddings.
 - Chatbot acts only through the Express API using the user's token; no direct DB access.
 - Confirmation interrupt required for place order, cancel, return, clear cart.
 - Payments: Cash on Delivery only in v1. Images: Cloudinary.
@@ -52,6 +51,10 @@ Update this file after every meaningful implementation change.
 
 ## Session Notes
 
+- RAG workflow: query analysis is a pydantic-validated Gemini JSON step (intent, standalone_query, filters in paise, needs_retrieval). FAISS retrieves `RETRIEVE_K` hits, Gemini reranks to the top 5 at or above `RERANK_MIN_SCORE` (skipped at 3 or fewer hits; FAISS order on failure). Live price/stock/image come from `GET /api/products/:slug`. Cart and order intents return a fixed deferred message. Chat sessions and LangGraph checkpoints use PostgreSQL (`user_id` text). Greeting is client-side from AuthContext. Chat UI renders only when `VITE_CHATBOT_ENABLED=true`.
+- Cloudinary upload error follow-up: provider 401s now return a sanitized 503 that names the server env variables to verify; other upload failures return a sanitized 502. Server lint and the focused admin tests pass (6 tests). The configured Cloudinary credentials still need to be corrected in `server/.env` and the server restarted; secret values were not inspected or changed.
+- P2-09 UI update: navbar Start/Close chat toggles the shared assistant state; desktop reserves 420px for the drawer and mobile uses a full-width modal overlay. Empty product placeholders no longer render as fake products, and real product cards accept paise/stock fields. Client lint/build pass. Browser checked at 1440px and 390px; drawer open/close and responsive geometry verified. The active chatbot endpoint's hardcoded zero-count result remains tracked as a separate P2-07 follow-up.
+- P2-03 vector backend uses FAISS CPU for normalized cosine-search indexes and SQLite for persisted documents and metadata. The chatbot test suite passes (5 tests), Ruff passes, and `requirements.txt` resolves. Full export ingest still requires the Express endpoint and Gemini credentials.
 - P1-13 implemented: live admin dashboard stats, revenue and order-status charts, low-stock table, product search/pagination/create/edit/image upload/activation/delete, category CRUD/activation, and filtered/paginated order management with detail modal and legal next-status transitions. Client lint and production build pass. The API health proxy returns HTTP 200. Authenticated CRUD/status workflows still need verification before P1-13 can be marked complete.
 - Customer account follow-up: order data now refetches on window focus, load failures have a retry state, and timeline/date rendering tolerates incomplete legacy data. Client lint and production build pass; the reported crash was not reproduced with an authenticated customer session.
 - The chart library is lazy-loaded as a separate bundle; Vite still reports the ApexCharts vendor chunk at about 954 KB.

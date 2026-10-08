@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { proxyChatbot } from './chat.js';
+import { buildAdminChatContext } from '../services/adminChatContext.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   getCategories,
   getCategoryById,
@@ -40,6 +43,38 @@ adminRouter.get('/ping', (_req, res) => {
 });
 
 adminRouter.get('/stats', getStats);
+
+adminRouter.post(
+  '/chat',
+  asyncHandler(async (req, res) => {
+    const shopContext = await buildAdminChatContext();
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    await proxyChatbot(
+      req,
+      res,
+      '/chat',
+      {
+        thread_id: body.thread_id,
+        message: body.message,
+        page_context: {
+          ...(body.page_context && typeof body.page_context === 'object' ? body.page_context : {}),
+          page_type: 'admin',
+        },
+        shop_context: shopContext,
+      },
+      { userId: `admin:${req.user.id}` },
+    );
+  }),
+);
+
+adminRouter.get(
+  '/chat/sessions/latest',
+  asyncHandler(async (req, res) => {
+    await proxyChatbot(req, res, '/chat/sessions/latest', undefined, {
+      userId: `admin:${req.user.id}`,
+    });
+  }),
+);
 
 adminRouter.post('/uploads/image', uploadProductImage, postProductImage);
 

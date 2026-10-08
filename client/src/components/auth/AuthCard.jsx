@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandMark from '../brand/BrandMark.jsx';
 
 export default function AuthCard({ subtitle, children, footer }) {
   return (
@@ -10,7 +11,7 @@ export default function AuthCard({ subtitle, children, footer }) {
           to="/"
           className="mb-6 flex items-center justify-center gap-3 text-2xl font-extrabold text-forest-dark"
         >
-          <i className="bi bi-asterisk text-[1.75rem] text-forest-medium" />
+          <BrandMark className="h-9 w-9 text-forest-medium" />
           <span>Spark Commerce</span>
         </Link>
         <p className="mb-8 text-center text-sm text-muted-green">{subtitle}</p>

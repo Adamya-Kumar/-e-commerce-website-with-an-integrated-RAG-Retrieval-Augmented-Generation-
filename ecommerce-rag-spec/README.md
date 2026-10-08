@@ -41,7 +41,7 @@ reference/spark-admin-theme/   your uploaded theme (read-only visual reference)
 | Images | Cloudinary |
 | Chatbot abilities | Recommend (RAG), manage cart, place/track/cancel/return orders (no admin tasks) |
 | Chatbot UI | Floating bubble opening a side drawer |
-| Chatbot stack | Python FastAPI + LangGraph, ChromaDB, Gemini (chat + embeddings) |
+| Chatbot stack | Python FastAPI + LangGraph, FAISS + SQLite, Gemini (chat + embeddings) |
 
 ## Defaults I chose (low risk, change any of them)
 
@@ -57,7 +57,7 @@ reference/spark-admin-theme/   your uploaded theme (read-only visual reference)
 ## Reference links (official docs)
 
 - LangGraph: https://langchain-ai.github.io/langgraph/
-- ChromaDB: https://docs.trychroma.com
+- FAISS: https://github.com/facebookresearch/faiss
 - Gemini API: https://ai.google.dev/gemini-api/docs
 - FastAPI: https://fastapi.tiangolo.com
 - Tailwind CSS: https://tailwindcss.com/docs
