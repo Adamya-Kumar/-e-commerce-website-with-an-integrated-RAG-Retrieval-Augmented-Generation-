@@ -17,7 +17,7 @@ function getPageType(pathname) {
   return 'generic';
 }
 
-export default function ChatDrawer({ open, onClose }) {
+export default function ChatDrawer({ open, onClose, channel = 'shop' }) {
   const location = useLocation();
   const navigate = useNavigate();
   const drawerRef = useRef(null);
@@ -38,11 +38,20 @@ export default function ChatDrawer({ open, onClose }) {
     };
   }, [count, location.pathname]);
 
+  const isAdmin = channel === 'admin';
+  const transcriptRef = useRef(null);
   const { messages, isStreaming, pendingAction, error, sendMessage, confirmAction, setPendingAction } = useChatStream({
     open,
     user,
-    pageContext,
+    pageContext: isAdmin ? { ...pageContext, page_type: 'admin' } : pageContext,
+    channel,
   });
+
+  useEffect(() => {
+    const node = transcriptRef.current;
+    if (!open || !node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [open, messages, isStreaming, error]);
 
   useEffect(() => {
     if (!open || !drawerRef.current) return undefined;
@@ -116,8 +125,8 @@ export default function ChatDrawer({ open, onClose }) {
         ref={drawerRef}
         role="dialog"
         aria-modal={!isDesktop}
-        aria-label="Shopping assistant"
-        className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[420px] flex-col border-l border-forest-dark/10 bg-canvas shadow-spark-lg lg:max-w-none lg:w-drawer"
+        aria-label={isAdmin ? 'Shop assistant' : 'Shopping assistant'}
+        className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[420px] flex-col overflow-x-hidden border-l border-forest-dark/10 bg-canvas shadow-spark-lg lg:max-w-none lg:w-drawer"
       >
         <header className="flex items-center justify-between border-b border-white/10 bg-forest-dark px-5 py-4 text-white">
           <div className="flex items-center gap-3">
@@ -125,8 +134,8 @@ export default function ChatDrawer({ open, onClose }) {
               <i className="bi bi-stars" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Spark Assistant</p>
-              <p className="text-[11px] text-white/70">Shopping help</p>
+              <p className="text-sm font-semibold">{isAdmin ? 'Shop Assistant' : 'Spark Assistant'}</p>
+              <p className="text-[11px] text-white/70">{isAdmin ? 'Store operations' : 'Shopping help'}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-white/80 transition hover:bg-white/5 hover:text-white" aria-label="Close chat">
@@ -135,21 +144,21 @@ export default function ChatDrawer({ open, onClose }) {
         </header>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 py-4" aria-live="polite" aria-atomic="false">
-            {messages.length === 0 ? (
-              <div className="space-y-3">
-                <div className="rounded-2xl bg-white p-4 shadow-spark-sm">
-                  <p className="text-sm font-semibold text-main">
-                    {user?.name
-                      ? `Hi ${user.name.trim().split(/\s+/)[0]}! How can I help you today?`
-                      : 'Hi there! How can I help you today?'}
-                  </p>
-                </div>
-                <SuggestedPrompts pageType={pageContext.page_type} onSelect={handleSubmit} />
+          <div ref={transcriptRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4" aria-live="polite" aria-atomic="false">
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-white p-4 shadow-spark-sm">
+                <p className="text-sm font-semibold text-main">
+                  {user?.name
+                    ? `Hi ${user.name.trim().split(/\s+/)[0]}! How can I help you today?`
+                    : 'Hi there! How can I help you today?'}
+                </p>
               </div>
-            ) : (
-              <MessageList messages={messages} isStreaming={isStreaming} onConfirm={confirmAction} onDecline={() => confirmAction(false)} />
-            )}
+              {messages.length === 0 ? (
+                <SuggestedPrompts pageType={isAdmin ? 'admin' : pageContext.page_type} onSelect={handleSubmit} />
+              ) : (
+                <MessageList messages={messages} isStreaming={isStreaming} onConfirm={confirmAction} onDecline={() => confirmAction(false)} />
+              )}
+            </div>
 
             {pendingAction && !user ? (
               <div className="mt-4 rounded-2xl border border-dashed border-forest-medium/40 bg-white p-4 shadow-spark-sm">

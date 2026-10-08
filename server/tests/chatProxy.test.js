@@ -90,6 +90,20 @@ describe('chat proxy API', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('returns a clear 503 when the chatbot process is down', async () => {
+    global.fetch = jest.fn(async () => {
+      throw new TypeError('fetch failed');
+    });
+
+    const response = await request(app)
+      .post('/api/chat')
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe('CHATBOT_UNAVAILABLE');
+    expect(response.body.error.message).toMatch(/Chatbot is not running/i);
+  });
+
   it('allows guest chat requests without an X-User-Id header', async () => {
     const response = await request(app)
       .post('/api/chat')

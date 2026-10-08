@@ -6,6 +6,7 @@ from typing import Any
 from app.agent.prompts import CART_ORDER_DEFERRED
 from app.config import settings
 from app.rag.analyze import DEFERRED_INTENTS, analyze_query
+from app.rag.express_search import merge_product_hits, search_express_products
 from app.rag.generate import generate_answer
 from app.rag.hydrate import hydrate_products
 from app.rag.rerank import rerank_candidates
@@ -36,7 +37,9 @@ def stage_retrieve(analysis: QueryAnalysis) -> tuple[list[dict[str, Any]], list[
     query = analysis.standalone_query
     if analysis.intent == "policy":
         return [], retrieve_policies(query)
-    products = retrieve_products(query, filters=analysis.filters, k=settings.retrieve_k)
+    faiss_hits = retrieve_products(query, filters=analysis.filters, k=settings.retrieve_k)
+    express_hits = search_express_products(query, filters=analysis.filters, limit=8)
+    products = merge_product_hits(query, faiss_hits, express_hits, limit=8)
     policies: list[dict[str, Any]] = []
     if analysis.intent in {"product_question", "compare"}:
         policies = []
@@ -49,6 +52,8 @@ def stage_rerank(
 ) -> list[dict[str, Any]]:
     if analysis.intent == "policy" or not candidates:
         return candidates
+    if all(float(item.get("score") or 0) >= 1 for item in candidates):
+        return candidates[:5]
     return rerank_candidates(analysis.standalone_query, candidates)
 
 
@@ -69,7 +74,14 @@ def stage_generate(
 ) -> str:
     if analysis.intent in DEFERRED_INTENTS:
         return CART_ORDER_DEFERRED
-    return generate_answer(message, history, products, policies, intent=analysis.intent)
+    return generate_answer(
+        message,
+        history,
+        products,
+        policies,
+        intent=analysis.intent,
+        match_query=analysis.standalone_query,
+    )
 
 
 async def run_stages(
@@ -77,13 +89,43 @@ async def run_stages(
     history: list[dict[str, Any]] | None = None,
     user: dict[str, Any] | None = None,
 ) -> PipelineResult:
-    analysis = stage_analyze(message, history)
-    candidates, policies = stage_retrieve(analysis)
-    ranked = stage_rerank(analysis, candidates)
-    products = await stage_hydrate(ranked, user)
+    analysis = await asyncio.to_thread(stage_analyze, message, history)
+    from app.rag.conversation import opening_reply
+
+    clarifying = opening_reply(message, history, analysis)
+    if clarifying:
+        return {
+            "answer": clarifying,
+            "products": [],
+            "policies": [],
+            "filters_used": analysis.filters.model_dump(exclude_none=True),
+            "analysis": analysis.model_dump(),
+        }
+    candidates, policies = await asyncio.to_thread(stage_retrieve, analysis)
+    ranked = await asyncio.to_thread(stage_rerank, analysis, candidates)
+    try:
+        products = await asyncio.wait_for(stage_hydrate(ranked, user), timeout=8)
+    except TimeoutError:
+        products = []
+    if not products and ranked:
+        products = ranked
     if analysis.intent == "policy" and not policies:
-        policies = retrieve_policies(analysis.standalone_query)
-    answer = stage_generate(message, history, analysis, products, policies)
+        policies = await asyncio.to_thread(retrieve_policies, analysis.standalone_query)
+    answer = await asyncio.to_thread(
+        stage_generate,
+        message,
+        history,
+        analysis,
+        products,
+        policies,
+    )
+    if not (answer or "").strip():
+        from app.agent.prompts import CART_ORDER_DEFERRED, NOT_FOUND_ANSWER
+
+        if analysis.intent in DEFERRED_INTENTS:
+            answer = CART_ORDER_DEFERRED
+        else:
+            answer = NOT_FOUND_ANSWER
     return {
         "answer": answer,
         "products": products,
@@ -99,12 +141,8 @@ async def answer_query(
     user: dict[str, Any] | None = None,
     thread_id: str | None = None,
 ) -> PipelineResult:
-    from app.agent.graph import ainvoke_pipeline
-
-    try:
-        return await ainvoke_pipeline(message, history, user, thread_id=thread_id)
-    except Exception:
-        return await run_stages(message, history, user)
+    del thread_id
+    return await run_stages(message, history, user)
 
 
 def answer_query_sync(

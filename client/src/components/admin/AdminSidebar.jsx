@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
+import BrandMark from '../brand/BrandMark.jsx';
 import { cn } from '../ui/cn.js';
 
 const SECTIONS = [
@@ -52,7 +53,7 @@ export default function AdminSidebar({
         )}
         onClick={onNavigate}
       >
-        <i className="bi bi-asterisk text-[1.5rem] text-lime transition duration-300 ease-in-out hover:text-lime-hover" />
+        <BrandMark className="h-8 w-8" />
         <span className={cn(iconOnly && 'hidden')}>Spark Admin</span>
       </Link>
 

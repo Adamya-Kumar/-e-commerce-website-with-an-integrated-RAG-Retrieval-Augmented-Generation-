@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminNavbar from '../components/admin/AdminNavbar.jsx';
 import AdminSidebar from '../components/admin/AdminSidebar.jsx';
+import ChatDrawer from '../components/chat/ChatDrawer.jsx';
+import ChatFab from '../components/chat/ChatFab.jsx';
 import { useAuth } from '../context/useAuth.js';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
+
+const chatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true';
 
 const COLLAPSE_KEY = 'spark-sidebar-collapsed';
 
@@ -12,6 +16,8 @@ export default function AdminLayout() {
   const isDesktop = useMediaQuery('(min-width: 992px)');
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const assistantOpen = chatbotEnabled && chatOpen;
 
   useEffect(() => {
     if (isDesktop) setMobileOpen(false);
@@ -45,9 +51,9 @@ export default function AdminLayout() {
       <div
         className={
           isDesktop
-            ? collapsed
-              ? 'ml-sidebar-collapsed min-h-screen transition-[margin] duration-300 ease-drawer'
-              : 'ml-sidebar min-h-screen transition-[margin] duration-300 ease-drawer'
+            ? `${collapsed ? 'ml-sidebar-collapsed' : 'ml-sidebar'} min-h-screen transition-[margin] duration-300 ease-drawer ${
+                assistantOpen ? 'lg:mr-[var(--drawer-width)]' : ''
+              }`
             : 'min-h-screen'
         }
       >
@@ -61,6 +67,16 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </div>
+      {chatbotEnabled ? (
+        <>
+          <ChatFab
+            open={assistantOpen}
+            label="shop assistant"
+            onToggle={() => setChatOpen((current) => !current)}
+          />
+          <ChatDrawer open={assistantOpen} channel="admin" onClose={() => setChatOpen(false)} />
+        </>
+      ) : null}
     </div>
   );
 }

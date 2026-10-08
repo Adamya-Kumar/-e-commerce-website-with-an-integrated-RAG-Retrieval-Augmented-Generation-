@@ -81,20 +81,24 @@ def test_latest_chat_session_returns_user_messages(monkeypatch) -> None:
         set_llm_hooks(None, None)
 
 
-def test_chat_emits_cancelling_when_disconnected(monkeypatch) -> None:
+def test_chat_always_emits_token_and_done(monkeypatch) -> None:
     monkeypatch.setattr(settings, "service_key", "test-secret", raising=False)
+    monkeypatch.setattr("app.rag.analyze.fetch_categories", lambda **_k: ["laptops"])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_products", lambda *_a, **_k: [])
+    monkeypatch.setattr("app.rag.pipeline.retrieve_policies", lambda *_a, **_k: [])
+    set_llm_hooks(complete_json=_fake_json, complete_text=lambda *_a, **_k: "")
 
-    class DisconnectRequest:
+    class ConnectedRequest:
         headers = {"X-Service-Key": "test-secret"}
 
         async def is_disconnected(self) -> bool:
-            return True
+            return False
 
     from app.main import ChatRequest, chat_stream
 
     async def run() -> str:
         response = await chat_stream(
-            DisconnectRequest(),  # type: ignore[arg-type]
+            ConnectedRequest(),  # type: ignore[arg-type]
             ChatRequest(thread_id="33333333-3333-3333-3333-333333333333", message="hi"),
         )
         chunks: list[str] = []
@@ -104,5 +108,9 @@ def test_chat_emits_cancelling_when_disconnected(monkeypatch) -> None:
 
     import asyncio
 
-    body = asyncio.run(run())
-    assert "event: cancelling" in body
+    try:
+        body = asyncio.run(run())
+    finally:
+        set_llm_hooks(None, None)
+    assert "event: token" in body
+    assert "event: done" in body

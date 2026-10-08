@@ -7,7 +7,7 @@ export default function ProductCardMini({ products = [] }) {
   if (!list.length) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2 overflow-x-hidden">
       {list.map((product, index) => {
         const title = product?.title || product?.name || 'Product';
         const slug = product?.slug || product?.id || `product-${index}`;
@@ -19,7 +19,7 @@ export default function ProductCardMini({ products = [] }) {
           <Link
             key={`${slug}-${index}`}
             to={slug.startsWith('/products/') ? slug : `/products/${slug}`}
-            className="block rounded-2xl border border-light bg-white p-3 shadow-spark-sm transition hover:border-forest-medium/60"
+            className="block min-w-0 overflow-hidden rounded-2xl border border-light bg-white p-3 shadow-spark-sm transition hover:border-forest-medium/60"
           >
             <div className="flex gap-3">
               <img src={image} alt={title} className="h-16 w-16 rounded-xl object-cover" />

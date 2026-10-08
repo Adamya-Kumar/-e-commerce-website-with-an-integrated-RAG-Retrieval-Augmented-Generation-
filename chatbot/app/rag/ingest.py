@@ -9,9 +9,10 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any, Iterable
 
-import faiss
 import httpx
 import numpy as np
+
+from app.rag.vector_index import load_index, normalize_l2, save_index
 from fastapi import HTTPException, Request
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
@@ -71,10 +72,7 @@ def get_collection_records(name: str) -> list[dict[str, Any]]:
 
 
 def get_faiss_index(name: str) -> Any | None:
-    index_path = Path(settings.faiss_dir) / f"{name}.faiss"
-    if not index_path.exists():
-        return None
-    return faiss.read_index(str(index_path))
+    return load_index(Path(settings.faiss_dir) / f"{name}.npz")
 
 
 def _rebuild_faiss_index(name: str) -> None:
@@ -84,7 +82,9 @@ def _rebuild_faiss_index(name: str) -> None:
             (name,),
         ).fetchall()
 
-    index_path = Path(settings.faiss_dir) / f"{name}.faiss"
+    index_path = Path(settings.faiss_dir) / f"{name}.npz"
+    legacy_path = Path(settings.faiss_dir) / f"{name}.faiss"
+    legacy_path.unlink(missing_ok=True)
     if not rows:
         index_path.unlink(missing_ok=True)
         return
@@ -95,10 +95,8 @@ def _rebuild_faiss_index(name: str) -> None:
         raise ValueError(f"Embeddings in the {name} collection have different dimensions.")
 
     matrix = np.vstack(vectors).astype(np.float32, copy=False)
-    faiss.normalize_L2(matrix)
-    index = faiss.IndexIDMap2(faiss.IndexFlatIP(dimension))
-    index.add_with_ids(matrix, np.asarray([row["vector_id"] for row in rows], dtype=np.int64))
-    faiss.write_index(index, str(index_path))
+    normalize_l2(matrix)
+    save_index(index_path, matrix, np.asarray([row["vector_id"] for row in rows], dtype=np.int64))
 
 
 def _upsert_documents(

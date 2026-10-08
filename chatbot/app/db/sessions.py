@@ -194,12 +194,71 @@ def latest_session_for_user(user_id: str | None) -> dict[str, Any] | None:
         return None
 
 
+def _history_rows(session: dict[str, Any]) -> list[dict[str, str]]:
+    return [
+        {"role": item["role"], "content": item["content"]}
+        for item in session.get("messages", [])
+        if item.get("role") in {"user", "assistant"} and item.get("content")
+    ]
+
+
+def _postgres_session(session_id: str) -> dict[str, Any] | None:
+    if not settings.postgres_url or psycopg is None:
+        return None
+    try:
+        with psycopg.connect(settings.postgres_url) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, user_id, title FROM chat_sessions
+                    WHERE id = %s
+                    """,
+                    (session_id,),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    return None
+                cursor.execute(
+                    """
+                    SELECT id, role, content, ui_cards
+                    FROM chat_messages
+                    WHERE session_id = %s
+                    ORDER BY created_at ASC
+                    """,
+                    (session_id,),
+                )
+                messages = []
+                for item in cursor.fetchall():
+                    cards = item[3]
+                    if isinstance(cards, str):
+                        cards = json.loads(cards)
+                    messages.append(
+                        {
+                            "id": str(item[0]),
+                            "role": item[1],
+                            "content": item[2],
+                            "ui_cards": cards or [],
+                        }
+                    )
+                return {
+                    "id": str(row[0]),
+                    "user_id": str(row[1]) if row[1] is not None else None,
+                    "title": row[2],
+                    "messages": messages,
+                    "updated_at": _now(),
+                }
+    except Exception:
+        return None
+
+
 def history_for_session(session_id: str) -> list[dict[str, str]]:
     session = IN_MEMORY_CHAT_SESSIONS.get(session_id)
+    if session and session.get("messages"):
+        return _history_rows(session)
+    loaded = _postgres_session(session_id)
+    if loaded and loaded.get("messages"):
+        IN_MEMORY_CHAT_SESSIONS[session_id] = loaded
+        return _history_rows(loaded)
     if session:
-        return [
-            {"role": item["role"], "content": item["content"]}
-            for item in session.get("messages", [])
-            if item.get("role") in {"user", "assistant"}
-        ]
+        return _history_rows(session)
     return []

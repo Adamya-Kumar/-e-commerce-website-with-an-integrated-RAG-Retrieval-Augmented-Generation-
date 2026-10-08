@@ -39,9 +39,85 @@ function buildSort(sort, hasQuery) {
     return { price: -1, _id: 1 };
   }
   if (sort === 'relevance' && hasQuery) {
-    return { score: { $meta: 'textScore' } };
+    return { title: 1, _id: 1 };
   }
   return { createdAt: -1, _id: 1 };
+}
+
+const SEARCH_STOPWORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'best',
+  'buy',
+  'can',
+  'find',
+  'for',
+  'get',
+  'good',
+  'help',
+  'in',
+  'inr',
+  'looking',
+  'me',
+  'my',
+  'need',
+  'of',
+  'on',
+  'ones',
+  'or',
+  'please',
+  'range',
+  'rs',
+  'rupee',
+  'rupees',
+  'show',
+  'some',
+  'suggest',
+  'the',
+  'to',
+  'under',
+  'want',
+  'with',
+  'you',
+]);
+
+function tokenToRegex(token) {
+  const lower = String(token).toLowerCase();
+  const stem = lower.length > 3 && lower.endsWith('s') ? lower.slice(0, -1) : lower;
+  return new RegExp(`${escapeRegex(stem)}s?`, 'i');
+}
+
+function caseInsensitiveTokenFilter(raw) {
+  const seen = new Set();
+  const tokens = [];
+  for (const part of String(raw).trim().split(/\s+/)) {
+    const token = part.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (token.length <= 1 || SEARCH_STOPWORDS.has(token) || seen.has(token)) {
+      continue;
+    }
+    seen.add(token);
+    tokens.push(token);
+  }
+  if (tokens.length === 0) {
+    return null;
+  }
+  const parts = tokens.map((token) => {
+    const rx = tokenToRegex(token);
+    return {
+      $or: [
+        { title: rx },
+        { brand: rx },
+        { tags: rx },
+        { slug: rx },
+        { description: rx },
+      ],
+    };
+  });
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  return { $and: parts };
 }
 
 /** @param {string} value */
@@ -97,7 +173,10 @@ export async function searchProducts(query) {
   }
 
   if (query.q) {
-    filter.$text = { $search: query.q };
+    const textMatch = caseInsensitiveTokenFilter(query.q);
+    if (textMatch) {
+      Object.assign(filter, textMatch);
+    }
   }
 
   const [total, docs] = await Promise.all([
@@ -138,10 +217,10 @@ function emptyPage(query) {
 
 /** @param {string} slug */
 export async function getActiveProductBySlug(slug) {
-  const product = await Product.findOne({ slug, isActive: true }).populate(
-    'category',
-    'name slug',
-  );
+  const product = await Product.findOne({
+    slug: new RegExp(`^${escapeRegex(slug)}$`, 'i'),
+    isActive: true,
+  }).populate('category', 'name slug');
   if (!product) {
     throw ApiError.notFound('Product not found');
   }

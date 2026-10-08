@@ -48,10 +48,11 @@ The shopping assistant is a third service (`chatbot/`). The browser talks only t
 
 | Variable | Purpose |
 |---|---|
-| `GOOGLE_API_KEY` | Gemini API key |
-| `GEMINI_CHAT_MODEL` | Chat/analysis/generate model id |
+| `GROQ_API_KEY` | Primary chat model (Groq) |
+| `GROQ_CHAT_MODEL` | Groq model id, default `llama-3.3-70b-versatile` |
+| `GOOGLE_API_KEY` | Gemini fallback chat and catalog embeddings |
+| `GEMINI_CHAT_MODEL` | Fallback chat model, default `gemini-2.0-flash` |
 | `GEMINI_EMBED_MODEL` | Embedding model id |
-| `GEMINI_RERANK_MODEL` | Optional rerank model; falls back to the chat model |
 | `EXPRESS_BASE_URL` | Express origin, e.g. `http://localhost:5000` |
 | `SERVICE_KEY` | Shared with Express |
 | `POSTGRES_URL` | Chat sessions and LangGraph checkpoints |

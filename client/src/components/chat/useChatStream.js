@@ -27,7 +27,9 @@ function normalizeMessage(entry) {
   };
 }
 
-export function useChatStream({ open, pageContext, user }) {
+export function useChatStream({ open, pageContext, user, channel = 'shop' }) {
+  const chatPath = channel === 'admin' ? '/api/admin/chat' : '/api/chat';
+  const historyPath = channel === 'admin' ? '/api/admin/chat/sessions/latest' : '/api/chat/sessions/latest';
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState([]);
   const [threadId, setThreadId] = useState('');
@@ -103,6 +105,9 @@ export function useChatStream({ open, pageContext, user }) {
         let rawData = '';
 
         for (const line of lines) {
+          if (line.startsWith(':')) {
+            continue;
+          }
           if (line.startsWith('event:')) {
             eventType = line.replace('event:', '').trim();
           } else if (line.startsWith('data:')) {
@@ -263,7 +268,7 @@ export function useChatStream({ open, pageContext, user }) {
             page_context: pageContext,
           };
 
-      const endpoint = action === 'confirm' ? '/api/chat/confirm' : '/api/chat';
+      const endpoint = action === 'confirm' ? '/api/chat/confirm' : chatPath;
 
       try {
         const response = await fetch(endpoint, {
@@ -294,12 +299,40 @@ export function useChatStream({ open, pageContext, user }) {
         }
 
         await readSseStream(response, action);
+        setMessages((current) => {
+          const last = current[current.length - 1];
+          if (last?.role === 'assistant' && last.content) {
+            return current.map((item, index) =>
+              index === current.length - 1 ? { ...item, isComplete: true } : item,
+            );
+          }
+          if (last?.role === 'assistant' && !last.content) {
+            const next = [...current];
+            next[next.length - 1] = {
+              ...last,
+              content: 'I could not complete that reply. Please try again.',
+              isComplete: true,
+            };
+            return next;
+          }
+          return [
+            ...current,
+            {
+              id: `assistant-${Date.now()}`,
+              role: 'assistant',
+              content: 'I could not complete that reply. Please try again.',
+              cards: [],
+              isComplete: true,
+            },
+          ];
+        });
       } catch (requestError) {
         setError(requestError?.message || 'The chat request failed.');
+      } finally {
         setIsStreaming(false);
       }
     },
-    [pageContext, pendingAction, readSseStream, threadId],
+    [chatPath, pageContext, pendingAction, readSseStream, threadId],
   );
 
   const sendMessage = useCallback(
@@ -348,7 +381,7 @@ export function useChatStream({ open, pageContext, user }) {
     let active = true;
     setIsLoadingHistory(true);
 
-    fetch('/api/chat/sessions/latest', {
+    fetch(historyPath, {
       credentials: 'include',
     })
       .then(async (response) => {
@@ -383,7 +416,7 @@ export function useChatStream({ open, pageContext, user }) {
     return () => {
       active = false;
     };
-  }, [open, user]);
+  }, [historyPath, open, user]);
 
   useEffect(() => {
     if (!open) {

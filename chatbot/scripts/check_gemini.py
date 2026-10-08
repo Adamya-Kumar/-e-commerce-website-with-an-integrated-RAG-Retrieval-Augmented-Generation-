@@ -5,30 +5,27 @@ import sys
 from app.config import settings
 
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+    from langchain_groq import ChatGroq
 except ImportError as exc:  # pragma: no cover - dependency install check
     raise SystemExit(
         "Missing Python dependencies. Install the project dependencies with "
-        "`pip install -e .` first."
+        "`pip install -r requirements.txt` first."
     ) from exc
 
 
 def main() -> int:
-    has_model_config = (
-        settings.google_api_key
-        and settings.gemini_chat_model
-        and settings.gemini_embed_model
-    )
-    if not has_model_config:
+    if not settings.has_groq_credentials or not settings.has_gemini_credentials:
         print(
-            "Missing Gemini configuration. Set GOOGLE_API_KEY, GEMINI_CHAT_MODEL, "
-            "and GEMINI_EMBED_MODEL in a local .env file before running this script."
+            "Missing model configuration. Set GROQ_API_KEY, GROQ_CHAT_MODEL, "
+            "GOOGLE_API_KEY, and GEMINI_EMBED_MODEL in chatbot/.env."
         )
         return 1
 
-    chat = ChatGoogleGenerativeAI(
-        model=settings.gemini_chat_model,
-        google_api_key=settings.google_api_key,
+    chat = ChatGroq(
+        model=settings.groq_chat_model,
+        groq_api_key=settings.groq_api_key,
+        temperature=0,
     )
     embeddings = GoogleGenerativeAIEmbeddings(
         model=settings.gemini_embed_model,

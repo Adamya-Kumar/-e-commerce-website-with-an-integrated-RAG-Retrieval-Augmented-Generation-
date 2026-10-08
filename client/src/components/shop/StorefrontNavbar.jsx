@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth.js';
 import { useCart } from '../../context/useCart.js';
 import { patchCatalogSearch } from '../../lib/catalogParams.js';
+import BrandMark from '../brand/BrandMark.jsx';
 import { cn } from '../ui/cn.js';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -81,7 +82,7 @@ export default function StorefrontNavbar({ chatOpen, onToggleChat, chatEnabled =
     <header className="sticky top-0 z-30 bg-navbar backdrop-blur-[12px]">
       <div className="mx-auto flex h-navbar max-w-7xl items-center gap-3 px-4">
         <Link to="/" className="flex shrink-0 items-center gap-2 text-lg font-extrabold text-forest-dark">
-          <i className="bi bi-asterisk text-[1.35rem] text-lime" />
+          <BrandMark className="h-8 w-8 text-lime" />
           <span className="hidden sm:inline">Spark Commerce</span>
         </Link>
 

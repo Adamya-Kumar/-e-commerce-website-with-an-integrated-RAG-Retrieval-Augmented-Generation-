@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import {
   createAdminCategory,
   deleteAdminCategory,
   fetchAdminCategories,
   updateAdminCategory,
+  uploadAdminProductImage,
 } from '../../api/admin.js';
 import { apiErrorMessage } from '../../api/http.js';
 import Button from '../../components/ui/Button.jsx';
@@ -12,15 +13,18 @@ import Input from '../../components/ui/Input.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import Spinner from '../../components/ui/Spinner.jsx';
+import { labelClass } from '../../components/ui/fieldClasses.js';
 
 const categorySchema = z.object({
   name: z.string().trim().min(1, 'Category name is required.'),
   slug: z.string().trim(),
-  image: z.string().trim().max(2000, 'Image URL is too long.'),
 });
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 function emptyForm() {
-  return { name: '', slug: '', image: '', isActive: true };
+  return { name: '', slug: '', image: '', imageFile: null, isActive: true };
 }
 
 export default function AdminCategoriesPage() {
@@ -33,6 +37,21 @@ export default function AdminCategoriesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [nameError, setNameError] = useState('');
+  const [imageError, setImageError] = useState('');
+  const [imagePreview, setImagePreview] = useState('');
+  const previewUrl = useRef('');
+
+  const clearPreview = useCallback(() => {
+    if (previewUrl.current) {
+      URL.revokeObjectURL(previewUrl.current);
+      previewUrl.current = '';
+    }
+    setImagePreview('');
+  }, []);
+
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+  }, []);
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -54,6 +73,8 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
     setForm(emptyForm());
     setNameError('');
+    setImageError('');
+    clearPreview();
     setModalOpen(true);
   }
 
@@ -63,9 +84,12 @@ export default function AdminCategoriesPage() {
       name: category.name || '',
       slug: category.slug || '',
       image: category.image || '',
+      imageFile: null,
       isActive: category.isActive !== false,
     });
     setNameError('');
+    setImageError('');
+    clearPreview();
     setModalOpen(true);
   }
 
@@ -74,6 +98,34 @@ export default function AdminCategoriesPage() {
     setModalOpen(false);
     setEditingCategory(null);
     setForm(emptyForm());
+    setImageError('');
+    clearPreview();
+  }
+
+  function chooseImage(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setImageError('Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError('Image must be 5 MB or smaller.');
+      return;
+    }
+    clearPreview();
+    const preview = URL.createObjectURL(file);
+    previewUrl.current = preview;
+    setImagePreview(preview);
+    setImageError('');
+    setForm((current) => ({ ...current, imageFile: file }));
+  }
+
+  function removeImage() {
+    clearPreview();
+    setImageError('');
+    setForm((current) => ({ ...current, image: '', imageFile: null }));
   }
 
   async function saveCategory(event) {
@@ -86,14 +138,21 @@ export default function AdminCategoriesPage() {
     setSaving(true);
     setError('');
     try {
+      let image = form.image;
+      if (form.imageFile) {
+        const uploaded = await uploadAdminProductImage(form.imageFile);
+        image = uploaded.url;
+      }
       const body = { name: parsed.data.name, isActive: form.isActive };
       if (parsed.data.slug) body.slug = parsed.data.slug;
-      if (parsed.data.image) body.image = parsed.data.image;
+      if (image) body.image = image;
+      else if (editingCategory) body.image = '';
       if (editingCategory) await updateAdminCategory(editingCategory.id, body);
       else await createAdminCategory(body);
       setModalOpen(false);
       setEditingCategory(null);
       setForm(emptyForm());
+      clearPreview();
       await loadCategories();
     } catch (requestError) {
       setError(apiErrorMessage(requestError));
@@ -178,8 +237,27 @@ export default function AdminCategoriesPage() {
         <form className="space-y-4" onSubmit={saveCategory}>
           <Input id="category-name" label="Name" value={form.name} onChange={(event) => { setForm((current) => ({ ...current, name: event.target.value })); setNameError(''); }} message={nameError} invalid={Boolean(nameError)} required />
           <Input id="category-slug" label="Slug (optional)" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} placeholder="Generated from category name" />
-          <Input id="category-image" label="Image URL (optional)" type="url" value={form.image} onChange={(event) => setForm((current) => ({ ...current, image: event.target.value }))} placeholder="https://example.com/category.jpg" />
-          {form.image ? <img src={form.image} alt="Category preview" className="aspect-[3/1] w-full rounded-lg object-cover" /> : null}
+          <label className="block" htmlFor="category-image">
+            <span className={labelClass}>Image (optional)</span>
+            <input
+              id="category-image"
+              className="block w-full text-sm text-muted-green file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-lime-soft file:px-3 file:py-2 file:font-bold file:text-forest-medium"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={chooseImage}
+              disabled={saving}
+            />
+            <span className="mt-1.5 block text-xs text-muted-green">JPEG, PNG, or WebP · up to 5 MB</span>
+            {imageError ? <span className="mt-1.5 block text-xs font-bold text-sys-red" role="alert">{imageError}</span> : null}
+          </label>
+          {imagePreview || form.image ? (
+            <div className="relative">
+              <img src={imagePreview || form.image} alt="Category preview" className="aspect-[3/1] w-full rounded-lg object-cover" />
+              <button type="button" aria-label="Remove category image" onClick={removeImage} disabled={saving} className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-forest-dark text-white">
+                <i className="bi bi-x-lg" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
           <label className="flex items-center gap-3 text-sm font-semibold text-main">
             <input type="checkbox" className="h-4 w-4 accent-forest-medium" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} />
             Active in storefront

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, TypedDict
 from uuid import uuid4
 
@@ -182,32 +183,40 @@ def build_graph() -> Any | None:
     return builder.compile()
 
 
-def _analyze_node(state: PipelineState) -> PipelineState:
+async def _analyze_node(state: PipelineState) -> PipelineState:
     from app.rag.pipeline import stage_analyze
 
-    analysis = stage_analyze(state.get("message") or "", state.get("history"))
+    analysis = await asyncio.to_thread(
+        stage_analyze,
+        state.get("message") or "",
+        state.get("history"),
+    )
     state["analysis"] = analysis.model_dump()
     state["filters_used"] = analysis.filters.model_dump(exclude_none=True)
     return state
 
 
-def _retrieve_node(state: PipelineState) -> PipelineState:
+async def _retrieve_node(state: PipelineState) -> PipelineState:
     from app.rag.pipeline import stage_retrieve
     from app.rag.schemas import QueryAnalysis
 
     analysis = QueryAnalysis.model_validate(state.get("analysis") or {})
-    candidates, policies = stage_retrieve(analysis)
+    candidates, policies = await asyncio.to_thread(stage_retrieve, analysis)
     state["candidates"] = candidates
     state["policies"] = policies
     return state
 
 
-def _rerank_node(state: PipelineState) -> PipelineState:
+async def _rerank_node(state: PipelineState) -> PipelineState:
     from app.rag.pipeline import stage_rerank
     from app.rag.schemas import QueryAnalysis
 
     analysis = QueryAnalysis.model_validate(state.get("analysis") or {})
-    state["candidates"] = stage_rerank(analysis, state.get("candidates") or [])
+    state["candidates"] = await asyncio.to_thread(
+        stage_rerank,
+        analysis,
+        state.get("candidates") or [],
+    )
     return state
 
 
@@ -218,12 +227,13 @@ async def _hydrate_node(state: PipelineState) -> PipelineState:
     return state
 
 
-def _generate_node(state: PipelineState) -> PipelineState:
+async def _generate_node(state: PipelineState) -> PipelineState:
     from app.rag.pipeline import stage_generate
     from app.rag.schemas import QueryAnalysis
 
     analysis = QueryAnalysis.model_validate(state.get("analysis") or {})
-    state["answer"] = stage_generate(
+    state["answer"] = await asyncio.to_thread(
+        stage_generate,
         state.get("message") or "",
         state.get("history"),
         analysis,
@@ -279,14 +289,17 @@ def initialize_agent_runtime() -> dict[str, Any]:
     """Initialize the LangGraph checkpointer if the Postgres-backed runtime is available."""
     global _pipeline_graph
     result = setup_postgres_checkpointer()
-    _pipeline_graph = build_pipeline_graph(_checkpointer)
+    try:
+        _pipeline_graph = build_pipeline_graph(None)
+    except Exception:
+        _pipeline_graph = None
     return result
 
 
 def get_pipeline_graph() -> Any | None:
     global _pipeline_graph
     if _pipeline_graph is None:
-        _pipeline_graph = build_pipeline_graph(_checkpointer)
+        _pipeline_graph = build_pipeline_graph(None)
     return _pipeline_graph
 
 
@@ -314,9 +327,19 @@ async def ainvoke_pipeline(
         return await run_stages(message, history, user)
 
     config = {"configurable": {"thread_id": thread_id or str(uuid4())}}
-    result = await graph.ainvoke(payload, config=config)
+    try:
+        result = await graph.ainvoke(payload, config=config)
+    except Exception:
+        from app.rag.pipeline import run_stages
+
+        return await run_stages(message, history, user)
+    answer = result.get("answer") or ""
+    if not str(answer).strip():
+        from app.agent.prompts import NOT_FOUND_ANSWER
+
+        answer = NOT_FOUND_ANSWER
     return {
-        "answer": result.get("answer") or "",
+        "answer": answer,
         "products": result.get("products") or [],
         "policies": result.get("policies") or [],
         "filters_used": result.get("filters_used") or {},

@@ -18,5 +18,9 @@ def isolate_external_services(monkeypatch: pytest.MonkeyPatch) -> None:
         "app.rag.analyze.fetch_categories",
         lambda **_kwargs: ["laptops", "phones", "audio", "wearables"],
     )
+    monkeypatch.setattr(
+        "app.rag.pipeline.search_express_products",
+        lambda *_args, **_kwargs: [],
+    )
     yield
     set_llm_hooks(None, None)

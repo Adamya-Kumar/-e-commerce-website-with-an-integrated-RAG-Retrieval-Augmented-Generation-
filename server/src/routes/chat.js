@@ -109,7 +109,7 @@ function enforceChatRateLimit(req, userId) {
   chatDayBuckets.set(dailyKey, dailyBucket);
 }
 
-async function proxyChatbot(req, res, path, payload) {
+export async function proxyChatbot(req, res, path, payload, options = {}) {
   const chatbotUrl = process.env.CHATBOT_URL;
   const serviceKey = process.env.SERVICE_KEY;
 
@@ -126,8 +126,9 @@ async function proxyChatbot(req, res, path, payload) {
     'X-Service-Key': serviceKey,
   };
 
-  if (req.chatUserId) {
-    headers['X-User-Id'] = req.chatUserId;
+  const userId = options.userId ?? req.chatUserId;
+  if (userId) {
+    headers['X-User-Id'] = userId;
   }
 
   const hasPayload = payload !== undefined && payload !== null;
@@ -135,20 +136,29 @@ async function proxyChatbot(req, res, path, payload) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: req.method,
-    headers,
-    body: hasPayload ? JSON.stringify(payload) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method: req.method,
+      headers,
+      body: hasPayload ? JSON.stringify(payload) : undefined,
+    });
+  } catch {
+    throw new ApiError(
+      503,
+      'CHATBOT_UNAVAILABLE',
+      'Chatbot is not running. From the chatbot folder start: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
+    );
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const isSse = contentType.includes('text/event-stream');
+  const forwardHeaders = ['content-type', 'cache-control', 'connection', 'x-accel-buffering'];
 
   for (const [key, value] of response.headers.entries()) {
-    if (key.toLowerCase() === 'content-length') {
-      continue;
+    if (forwardHeaders.includes(key.toLowerCase())) {
+      res.setHeader(key, value);
     }
-    res.setHeader(key, value);
   }
 
   if (!response.ok) {

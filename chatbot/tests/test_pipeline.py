@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
-from app.agent.prompts import GENERATE_PROMPT
+from app.agent.prompts import GENERATE_PROMPT, NOT_FOUND_ANSWER
 from app.llm import set_llm_hooks
 from app.rag.analyze import analyze_query
+from app.rag.express_search import merge_product_hits, search_express_products, search_tokens
 from app.rag.generate import generate_answer
 from app.rag.pipeline import run_stages
 from app.rag.rerank import rerank_candidates
@@ -85,6 +86,46 @@ def test_filter_parsing_under_60k(monkeypatch) -> None:
     assert analysis.filters.in_stock is True
 
 
+def test_new_search_does_not_reuse_previous_product(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.rag.analyze.fetch_categories",
+        lambda **_kwargs: ["laptops", "phones", "womens-fashion"],
+    )
+    history = [
+        {"role": "user", "content": "give lv bag under 1000 to 5000"},
+        {"role": "assistant", "content": "Here are options that match: LV Bag."},
+    ]
+    analysis = analyze_query("suggest some laptops", history=history)
+    assert analysis.standalone_query == "suggest some laptops"
+    assert analysis.filters.category == "laptops"
+    assert analysis.filters.max_price_paise is None
+
+
+def test_which_one_best_stays_on_previous_products(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.rag.analyze.fetch_categories",
+        lambda **_kwargs: ["laptops", "audio", "womens-fashion"],
+    )
+    history = [
+        {"role": "user", "content": "Show me wireless earbuds"},
+        {
+            "role": "assistant",
+            "content": "Here are options that match: Apple AirPods 4, Samsung Galaxy Buds FE.",
+        },
+    ]
+    analysis = analyze_query("which one this best", history=history)
+    assert analysis.intent == "compare"
+    assert "earbuds" in analysis.standalone_query.lower()
+    assert analysis.filters.category is None
+
+
+def test_which_one_without_history_does_not_search(monkeypatch) -> None:
+    monkeypatch.setattr("app.rag.analyze.fetch_categories", lambda **_kwargs: ["audio"])
+    analysis = analyze_query("which one this best", history=[])
+    assert analysis.intent == "chitchat"
+    assert analysis.needs_retrieval is False
+
+
 def test_follow_up_rewriting(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.rag.analyze.fetch_categories",
@@ -138,6 +179,98 @@ def test_rerank_skipped_when_three_or_fewer() -> None:
     ]
     ranked = rerank_candidates("query", candidates, enabled=True, min_score=0.9)
     assert [item["slug"] for item in ranked] == ["a", "b", "c"]
+
+
+def test_vague_follow_up_does_not_dump_catalog(monkeypatch) -> None:
+    def boom(*_args, **_kwargs):
+        raise AssertionError("catalog should not be called")
+
+    monkeypatch.setattr("app.rag.express_search.httpx.Client", boom)
+    assert search_express_products("which one this best") == []
+
+
+def test_compare_answer_uses_previous_products_not_unrelated_ones() -> None:
+    set_llm_hooks(complete_json=lambda *_a, **_k: None, complete_text=lambda *_a, **_k: "")
+    answer = generate_answer(
+        "which one this best",
+        [
+            {"role": "user", "content": "Show me wireless earbuds"},
+            {"role": "assistant", "content": "Apple AirPods 4 and Samsung Galaxy Buds FE."},
+        ],
+        [
+            {
+                "slug": "lv-bag",
+                "title": "LV Bag",
+                "price_paise": 100000,
+                "in_stock": True,
+                "document": "This one is a fashion bag",
+            },
+            {
+                "slug": "airpods-4",
+                "title": "Apple AirPods 4",
+                "price_paise": 1799900,
+                "in_stock": True,
+                "document": "Apple wireless earbuds",
+            },
+        ],
+        [],
+        intent="compare",
+        match_query="Show me wireless earbuds",
+    )
+    assert "LV Bag" not in answer
+    assert "AirPods" in answer
+
+
+def test_express_query_drops_chat_filler_and_category_words() -> None:
+    assert search_tokens("suggest some laptops", "laptops") == []
+    assert search_tokens("suggest some laptops") == ["laptops"]
+    assert search_tokens("acer laptop under 60k", "laptops") == ["acer"]
+    assert search_tokens("just give laptop under 30k to 40k range", "laptops") == []
+
+
+def test_price_range_is_rupees() -> None:
+    from app.rag.budget import parse_budget
+
+    expected = {"min_price_paise": 3_000_000, "max_price_paise": 4_000_000}
+    assert parse_budget("just give laptop under 30k to 40k range") == expected
+    assert parse_budget("product Laptops brand :any budget:30k to 40k") == expected
+    assert parse_budget("30k to 40k") == expected
+
+
+def test_generate_does_not_list_unrelated_product() -> None:
+    answer = generate_answer(
+        "suggest some laptops",
+        [{"role": "user", "content": "give lv bag"}, {"role": "assistant", "content": "LV Bag"}],
+        [
+            {
+                "slug": "lv-bag",
+                "title": "LV Bag",
+                "price_paise": 100000,
+                "in_stock": True,
+                "category": "womens-fashion",
+            }
+        ],
+        [],
+        intent="product_search",
+    )
+    assert answer == NOT_FOUND_ANSWER
+
+
+def test_merge_drops_unrelated_previous_product() -> None:
+    merged = merge_product_hits(
+        "suggest some laptops",
+        [{"slug": "lv-bag", "title": "LV Bag", "document": "LV Bag fashion tote"}],
+        [
+            {
+                "slug": "acer-aspire-5",
+                "title": "Acer Aspire 5",
+                "document": "Acer laptop for work",
+                "category": "laptops",
+            }
+        ],
+        limit=5,
+    )
+    assert [item["slug"] for item in merged] == ["acer-aspire-5"]
 
 
 def test_empty_result_is_honest(monkeypatch) -> None:

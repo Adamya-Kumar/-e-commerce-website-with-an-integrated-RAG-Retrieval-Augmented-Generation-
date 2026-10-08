@@ -4,12 +4,19 @@ import Button from '../ui/Button.jsx';
 export default function Composer({ onSubmit, disabled }) {
   const [value, setValue] = useState('');
 
-  async function handleSubmit(event) {
+  function handleSubmit(event) {
     event.preventDefault();
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
     onSubmit(trimmed);
     setValue('');
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
+    }
   }
 
   return (
@@ -25,6 +32,7 @@ export default function Composer({ onSubmit, disabled }) {
         placeholder="Ask about a product or your order…"
         className="min-h-[44px] flex-1 resize-none rounded-2xl border border-light bg-canvas px-3 py-2.5 text-sm text-main placeholder:text-muted-green focus:border-forest-medium focus:outline-none"
         disabled={disabled}
+        onKeyDown={handleKeyDown}
       />
       <Button type="submit" variant="accent" className="h-11 shrink-0 rounded-xl px-4" disabled={disabled || !value.trim()}>
         <i className="bi bi-send" />

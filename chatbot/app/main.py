@@ -39,6 +39,7 @@ class ChatRequest(BaseModel):
     thread_id: str | None = None
     message: str = ""
     page_context: dict[str, Any] | None = Field(default=None)
+    shop_context: dict[str, Any] | None = Field(default=None)
 
 
 def _normalize_user_id(request: Request) -> str | None:
@@ -78,12 +79,22 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/health/llm")
+def llm_health() -> dict[str, str | bool]:
+    chat_ready = settings.has_groq_credentials or settings.has_gemini_chat
+    return {
+        "status": "ok" if chat_ready and settings.has_gemini_credentials else "missing-config",
+        "chat_primary": "groq",
+        "chat_fallback": "gemini",
+        "groq_configured": settings.has_groq_credentials,
+        "gemini_chat_configured": settings.has_gemini_chat,
+        "embeddings_configured": settings.has_gemini_credentials,
+    }
+
+
 @app.get("/health/gemini")
 def gemini_health() -> dict[str, str | bool]:
-    return {
-        "status": "ok" if settings.has_gemini_credentials else "missing-config",
-        "configured": settings.has_gemini_credentials,
-    }
+    return llm_health()
 
 
 @app.post("/chat", response_class=StreamingResponse)
@@ -102,40 +113,54 @@ async def chat_stream(request: Request, payload: ChatRequest) -> StreamingRespon
     async def event_stream() -> AsyncIterator[str]:
         lock = THREAD_LOCKS[thread_id]
         async with lock:
-            if await request.is_disconnected():
-                yield _sse("cancelling", {"status": "cancelling", "thread_id": thread_id})
-                return
+            yield ": connected\n\n"
+            await asyncio.sleep(0)
 
             try:
-                result = await answer_query(
-                    message,
-                    history,
-                    {"id": user_id} if user_id else {"id": None, "role": "guest"},
-                    thread_id=thread_id,
-                )
+                if payload.shop_context:
+                    from app.rag.admin_chat import answer_admin
+
+                    result = await asyncio.wait_for(
+                        answer_admin(message, history, payload.shop_context),
+                        timeout=60,
+                    )
+                else:
+                    result = await asyncio.wait_for(
+                        answer_query(
+                            message,
+                            history,
+                            {"id": user_id} if user_id else {"id": None, "role": "guest"},
+                            thread_id=thread_id,
+                        ),
+                        timeout=60,
+                    )
+            except TimeoutError:
+                result = {
+                    "answer": (
+                        "I couldn't finish that search in time. "
+                        "Please try a shorter product question."
+                    ),
+                    "products": [],
+                }
             except Exception as exc:
-                if await request.is_disconnected():
-                    yield _sse("cancelling", {"status": "cancelling", "thread_id": thread_id})
-                    return
                 yield _sse("error", {"message": str(exc) or "The chatbot hit an issue."})
+                yield _sse("done", {"status": "error", "thread_id": thread_id})
                 return
 
-            answer = str(result.get("answer") or "")
+            answer = str(result.get("answer") or "").strip()
+            if not answer:
+                answer = (
+                    "I don't have that. I couldn't find anything relevant. "
+                    "Could you refine the search with a different product, brand, or budget?"
+                )
             products = result.get("products") or []
             ui_cards: list[dict[str, Any]] = []
             if products:
                 ui_cards.append({"type": "products", "products": products})
 
             for part in _chunk_text(answer):
-                if await request.is_disconnected():
-                    yield _sse("cancelling", {"status": "cancelling", "thread_id": thread_id})
-                    return
                 yield _sse("token", {"text": part})
                 await asyncio.sleep(0)
-
-            if await request.is_disconnected():
-                yield _sse("cancelling", {"status": "cancelling", "thread_id": thread_id})
-                return
 
             if ui_cards:
                 yield _sse("ui_card", ui_cards[0])

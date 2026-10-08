@@ -24,6 +24,12 @@ const PROMPTS = {
     'What are the delivery options?',
     'Can you help with my cart?',
   ],
+  admin: [
+    'Which products are low on stock?',
+    'How are orders looking?',
+    'What is the store revenue?',
+    'Summarize the recent orders',
+  ],
 };
 
 export default function SuggestedPrompts({ pageType, onSelect }) {

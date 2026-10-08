@@ -48,19 +48,21 @@ function renderCard(card, onConfirm, onDecline) {
 
 export default function MessageList({ messages, isStreaming, onConfirm, onDecline }) {
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       {messages.map((message) => {
         const isUser = message.role === 'user';
         return (
-          <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+          <div key={message.id} className={`flex min-w-0 ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className={`min-w-0 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
               <div
                 className={[
-                  'rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-spark-sm',
+                  'overflow-hidden break-words rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-spark-sm',
                   isUser ? 'bg-forest-medium text-white' : 'bg-white text-main',
                 ].join(' ')}
               >
-                {message.content ? <p>{message.content}</p> : null}
+                {message.content ? (
+                  <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.content}</p>
+                ) : null}
               </div>
               {Array.isArray(message.cards) && message.cards.length > 0 ? (
                 <div className="mt-2 space-y-2">{message.cards.map((card) => renderCard(card, onConfirm, onDecline))}</div>
