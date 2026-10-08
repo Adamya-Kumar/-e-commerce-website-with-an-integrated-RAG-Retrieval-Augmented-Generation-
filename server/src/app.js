@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { connectDb } from './config/db.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import addressRouter from './routes/addresses.js';
 import adminRouter from './routes/admin.js';
@@ -30,6 +31,14 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDb();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 app.use('/api', healthRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/internal', internalRouter);
