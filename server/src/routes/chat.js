@@ -2,12 +2,18 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { Readable } from 'node:stream';
 import { getJwtSecret } from '../config/auth.js';
+import {
+  getChatbotBaseUrl,
+  isLocalChatbotUrl,
+  logChatbotFailure,
+} from '../config/chatbot.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { readAuthToken } from '../utils/authToken.js';
 
 const chatRouter = Router();
 const CHAT_RATE_WINDOW_MS = 60_000;
+const CHATBOT_REQUEST_TIMEOUT_MS = 90_000;
 const CHAT_RATE_LIMIT = Number(process.env.CHAT_RATE_LIMIT ?? 20);
 const CHAT_DAILY_LIMIT = Number(process.env.CHAT_DAILY_LIMIT ?? 500);
 const chatMinuteBuckets = new Map();
@@ -110,18 +116,17 @@ function enforceChatRateLimit(req, userId) {
 }
 
 export async function proxyChatbot(req, res, path, payload, options = {}) {
-  const chatbotUrl = process.env.CHATBOT_URL;
+  const chatbotUrl = getChatbotBaseUrl();
   const serviceKey = process.env.SERVICE_KEY;
 
   if (!chatbotUrl) {
-    throw ApiError.badRequest('Chatbot URL is not configured');
+    throw new ApiError(503, 'CHATBOT_URL_NOT_CONFIGURED', 'Chatbot URL is not configured');
   }
 
   if (!serviceKey) {
     throw ApiError.badRequest('Service key is not configured');
   }
 
-  const baseUrl = chatbotUrl.replace(/\/$/, '');
   const headers = {
     'X-Service-Key': serviceKey,
   };
@@ -137,37 +142,105 @@ export async function proxyChatbot(req, res, path, payload, options = {}) {
   }
 
   let response;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new DOMException('Chatbot request timed out', 'TimeoutError')),
+    CHATBOT_REQUEST_TIMEOUT_MS,
+  );
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await fetch(`${chatbotUrl}${path}`, {
       method: req.method,
       headers,
       body: hasPayload ? JSON.stringify(payload) : undefined,
+      signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    const errorName =
+      error && typeof error === 'object' && 'name' in error
+        ? error.name
+        : undefined;
+    const isTimeout =
+      controller.signal.aborted ||
+      errorName === 'AbortError' ||
+      errorName === 'TimeoutError';
+    logChatbotFailure({
+      baseUrl: chatbotUrl,
+      error,
+      errorCode: isTimeout ? 'CHATBOT_TIMEOUT' : undefined,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      serviceKey,
+    });
+    const localHint = isLocalChatbotUrl(chatbotUrl)
+      ? ' From the chatbot folder start: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000'
+      : '';
+    if (isTimeout) {
+      throw new ApiError(
+        504,
+        'CHATBOT_TIMEOUT',
+        `The chatbot is waking up and taking longer than expected. Please try again shortly.${localHint}`,
+      );
+    }
     throw new ApiError(
       503,
       'CHATBOT_UNAVAILABLE',
-      'Chatbot is not running. From the chatbot folder start: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
+      `The chatbot is unreachable.${localHint}`,
     );
+  } finally {
+    clearTimeout(timeout);
   }
 
   const contentType = response.headers.get('content-type') || '';
   const isSse = contentType.includes('text/event-stream');
   const forwardHeaders = ['content-type', 'cache-control', 'connection', 'x-accel-buffering'];
 
-  for (const [key, value] of response.headers.entries()) {
-    if (forwardHeaders.includes(key.toLowerCase())) {
-      res.setHeader(key, value);
-    }
-  }
-
   if (!response.ok) {
-    const bodyText = await response.text();
-    let parsed;
+    let bodyText;
     try {
-      parsed = JSON.parse(bodyText);
-    } catch {
-      parsed = null;
+      bodyText = await response.text();
+    } catch (error) {
+      logChatbotFailure({
+        baseUrl: chatbotUrl,
+        statusCode: response.status,
+        error,
+        serviceKey,
+      });
+      throw new ApiError(
+        502,
+        'CHATBOT_SERVICE_ERROR',
+        `The chatbot response could not be read (HTTP ${response.status}). Please try again later.`,
+      );
+    }
+    const parsed = parseJson(bodyText);
+    const errorCode = getResponseErrorValue(parsed, 'code');
+    const errorMessage =
+      getResponseErrorValue(parsed, 'message') ??
+      (bodyText || `Chatbot request failed with status ${response.status}`);
+    logChatbotFailure({
+      baseUrl: chatbotUrl,
+      statusCode: response.status,
+      errorCode,
+      errorMessage,
+      serviceKey,
+    });
+
+    if (response.status === 401) {
+      res.status(502).json({
+        error: {
+          code: 'CHATBOT_INVALID_SERVICE_KEY',
+          message: 'The chatbot rejected the service key (401). Check the server configuration.',
+        },
+      });
+      return;
+    }
+
+    if (response.status >= 500) {
+      res.status(502).json({
+        error: {
+          code: 'CHATBOT_SERVICE_ERROR',
+          message: `The chatbot service returned an error (HTTP ${response.status}). Please try again later.`,
+        },
+      });
+      return;
     }
 
     if (parsed && typeof parsed === 'object' && 'error' in parsed) {
@@ -178,20 +251,51 @@ export async function proxyChatbot(req, res, path, payload, options = {}) {
     res.status(response.status).json({
       error: {
         code: 'CHATBOT_PROXY_ERROR',
-        message: bodyText || 'Chatbot request failed',
+        message: errorMessage,
       },
     });
     return;
   }
 
+  for (const [key, value] of response.headers.entries()) {
+    if (forwardHeaders.includes(key.toLowerCase())) {
+      res.setHeader(key, value);
+    }
+  }
+
   if (isSse && response.body) {
     res.status(response.status);
     res.flushHeaders?.();
-    Readable.fromWeb(response.body).pipe(res);
+    const chatbotStream = Readable.fromWeb(response.body);
+    chatbotStream.on('error', (error) => {
+      logChatbotFailure({
+        baseUrl: chatbotUrl,
+        statusCode: response.status,
+        error,
+        serviceKey,
+      });
+      res.destroy(error);
+    });
+    chatbotStream.pipe(res);
     return;
   }
 
-  const text = await response.text();
+  let text;
+  try {
+    text = await response.text();
+  } catch (error) {
+    logChatbotFailure({
+      baseUrl: chatbotUrl,
+      statusCode: response.status,
+      error,
+      serviceKey,
+    });
+    throw new ApiError(
+      502,
+      'CHATBOT_SERVICE_ERROR',
+      `The chatbot response could not be read (HTTP ${response.status}). Please try again later.`,
+    );
+  }
   if (!text) {
     res.status(response.status).end();
     return;
@@ -202,4 +306,26 @@ export async function proxyChatbot(req, res, path, payload, options = {}) {
   } catch {
     res.status(response.status).send(text);
   }
+}
+
+function parseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function getResponseErrorValue(parsed, key) {
+  if (!parsed || typeof parsed !== 'object') {
+    return undefined;
+  }
+
+  const error = 'error' in parsed ? parsed.error : parsed;
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const value = error[key];
+  return typeof value === 'string' ? value : undefined;
 }
